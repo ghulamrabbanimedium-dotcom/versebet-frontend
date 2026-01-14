@@ -1,0 +1,4496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VerseBet | Elite Crypto Casino</title>
+    <meta name="description" content="Experience the future of gaming with VerseBet - the ultimate decentralized casino on Polygon.">
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script type="module" src="/src/walletConfig.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #bc13fe;
+            --bg: #05070a;
+            --glass: rgba(30, 35, 41, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --danger: #ff3366;
+            --success: #00ff88;
+            --warning: #ffaa00;
+        }
+
+        /* Custom Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 380px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: linear-gradient(135deg, rgba(15, 20, 30, 0.95), rgba(25, 30, 45, 0.9));
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 10px 40px rgba(0, 0, 0, 0.5),
+                0 0 30px rgba(0, 242, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toast::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .toast.toast-success::before { background: linear-gradient(90deg, #00ff88, #00f2ff); }
+        .toast.toast-error::before { background: linear-gradient(90deg, #ff3366, #ff6699); }
+        .toast.toast-warning::before { background: linear-gradient(90deg, #ffaa00, #ffcc00); }
+        .toast.toast-win::before { background: linear-gradient(90deg, #ffd700, #ff8c00, #ffd700); animation: shimmer 2s infinite; }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .toast.toast-exit {
+            animation: toastSlideOut 0.3s ease-in forwards;
+        }
+
+        @keyframes toastSlideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes toastSlideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(120%); opacity: 0; }
+        }
+
+        .toast-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-success .toast-icon { background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 242, 255, 0.1)); color: #00ff88; }
+        .toast-error .toast-icon { background: linear-gradient(135deg, rgba(255, 51, 102, 0.2), rgba(255, 102, 153, 0.1)); color: #ff3366; }
+        .toast-warning .toast-icon { background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 204, 0, 0.1)); color: #ffaa00; }
+        .toast-info .toast-icon { background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(188, 19, 254, 0.1)); color: var(--primary); }
+        .toast-win .toast-icon { background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.2)); color: #ffd700; font-size: 24px; }
+
+        .toast-content { flex: 1; min-width: 0; }
+        
+        .toast-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .toast-success .toast-title { color: #00ff88; }
+        .toast-error .toast-title { color: #ff3366; }
+        .toast-warning .toast-title { color: #ffaa00; }
+        .toast-info .toast-title { color: var(--primary); }
+        .toast-win .toast-title { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+
+        .toast-message {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            margin-left: 8px;
+            transition: color 0.2s;
+        }
+        .toast-close:hover { color: white; }
+
+        .toast-win {
+            background: linear-gradient(135deg, rgba(25, 25, 10, 0.95), rgba(40, 35, 20, 0.9));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 
+                0 10px 40px rgba(0, 0, 0, 0.5),
+                0 0 40px rgba(255, 215, 0, 0.15),
+                inset 0 1px 0 rgba(255, 215, 0, 0.2);
+        }
+
+        @media (max-width: 480px) {
+            .toast-container {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(0, 242, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(188, 19, 254, 0.05) 0%, transparent 40%);
+            color: white;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--glass-border);
+            gap: 10px;
+        }
+        
+        .navbar-brand {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 10px;
+                gap: 8px;
+            }
+            .navbar-brand {
+                font-size: 1rem;
+                letter-spacing: 1px;
+            }
+            .main-logo {
+                font-size: clamp(1.8rem, 8vw, 3rem);
+                letter-spacing: 4px;
+            }
+            .logo-container {
+                margin-bottom: 20px;
+            }
+            .subtitle {
+                font-size: 0.65rem;
+                letter-spacing: 2px;
+            }
+            .container {
+                padding: 20px 12px;
+            }
+            .multiplier-text {
+                font-size: 3rem;
+            }
+            .game-room-content {
+                padding: 16px;
+            }
+            .room-header h2 {
+                font-size: 1.5rem;
+            }
+            .room-header {
+                margin-bottom: 20px;
+            }
+            .game-grid {
+                gap: 12px;
+            }
+            .card {
+                padding: 16px;
+                border-radius: 16px;
+            }
+            .card h3 {
+                font-size: 1rem;
+                margin: 8px 0 4px;
+            }
+            .card p {
+                font-size: 0.75rem;
+                margin: 0;
+            }
+            .card span {
+                font-size: 2rem !important;
+            }
+            .btn-bet {
+                padding: 10px;
+                font-size: 0.75rem;
+                margin-top: 12px;
+            }
+            .btn-back {
+                margin-bottom: 16px;
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+            .crash-graph-area {
+                height: 250px;
+                border-radius: 16px;
+                margin-bottom: 16px;
+            }
+            .fairness-section {
+                padding: 12px;
+                font-size: 0.75rem;
+            }
+            .live-bettors-section {
+                margin-top: 16px;
+            }
+        }
+        
+        /* Card content wrapper */
+        .card-icon {
+            font-size: 3rem;
+        }
+        .card-content {
+            flex: 1;
+        }
+        
+        /* Extra small devices */
+        @media (max-width: 480px) {
+            .navbar {
+                padding: 8px 10px;
+            }
+            .navbar-brand {
+                font-size: 0.85rem;
+                letter-spacing: 0px;
+            }
+            .navbar-actions {
+                gap: 4px;
+            }
+            .main-logo {
+                font-size: clamp(1.5rem, 10vw, 2.5rem);
+                letter-spacing: 2px;
+            }
+            .logo-container {
+                margin-bottom: 16px;
+            }
+            .container {
+                padding: 12px 10px;
+            }
+            .game-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                width: 100%;
+                padding: 0;
+            }
+            .card {
+                padding: 14px 16px;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 14px;
+                text-align: left;
+                width: 100%;
+                box-sizing: border-box;
+                margin: 0;
+                border-radius: 16px;
+            }
+            .card-icon {
+                font-size: 2.2rem;
+                flex-shrink: 0;
+            }
+            .card-content h3 {
+                margin: 0 0 2px;
+                font-size: 1rem;
+            }
+            .card-content p {
+                margin: 0;
+                font-size: 0.7rem;
+            }
+            .card-content .btn-bet {
+                margin-top: 8px;
+                padding: 10px 20px;
+                width: auto;
+                display: inline-block;
+                font-size: 0.8rem;
+            }
+            .multiplier-text {
+                font-size: 2.5rem;
+            }
+            .crash-graph-area {
+                height: 200px;
+            }
+        }
+
+        .btn-connect {
+            font-family: 'Orbitron', sans-serif;
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s all;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        .btn-connect.connected {
+            color: #00ff88;
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                max-width: 100%;
+                padding: 20px 10px;
+                margin: 0;
+            }
+        }
+
+        /* SPA Navigation States */
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: #94a3b8;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            transition: 0.3s;
+        }
+        .btn-back:hover {
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Lobby Styles */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 0 10px;
+            overflow: hidden;
+        }
+        .main-logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2rem, 12vw, 5rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: clamp(2px, 2vw, 15px);
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(0, 242, 255, 0.5));
+            animation: logo-glow 2s ease-in-out infinite alternate;
+            max-width: 100%;
+            word-break: break-word;
+        }
+
+        @keyframes logo-glow {
+            from { filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.3)); }
+            to { filter: drop-shadow(0 0 25px rgba(188, 19, 254, 0.6)); }
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            transition: 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+        }
+
+        .btn-bet {
+            font-family: 'Orbitron', sans-serif;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: black;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            margin-top: 20px;
+        }
+
+        /* Room Styles */
+        .room {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        @media (max-width: 768px) {
+            .room {
+                max-width: 100%;
+                padding: 0 10px;
+            }
+        }
+        .room-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .room-header h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin: 10px 0;
+            color: var(--primary);
+        }
+
+        /* Crash Pro Room specific */
+        .crash-graph-area {
+            position: relative;
+            height: 350px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 30px;
+        }
+        #crashCanvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .multiplier-text {
+            position: relative;
+            z-index: 10;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+        .multiplier-text.crashed { color: var(--danger); }
+
+        /* Betting Controls Grid */
+        .bet-controls-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            max-width: 500px;
+            margin: 0 auto 20px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+        
+        .bet-amount-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .bet-amount-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .bet-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px 12px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .bet-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 10px rgba(0, 255, 255, 0.1);
+        }
+        
+        .amount-btn {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--primary);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .amount-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        .amount-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .target-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background: rgba(138, 43, 226, 0.1);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 12px;
+            min-width: 120px;
+        }
+        
+        .target-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        
+        .target-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--secondary);
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+        }
+        
+        .target-input-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        
+        .target-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(138, 43, 226, 0.4);
+            border-radius: 6px;
+            padding: 6px 8px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            width: 70px;
+            text-align: center;
+        }
+        
+        .target-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+        }
+        
+        .bet-action-row {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .btn-place-bet {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 12px;
+            padding: 16px 40px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            max-width: 300px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .btn-place-bet:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        .btn-place-bet:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-place-bet.cashout {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            animation: pulse-btn 1s infinite;
+        }
+        
+        @keyframes pulse-btn {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(0, 255, 136, 0.3); }
+        }
+        
+        /* Mobile responsive betting controls */
+        @media (max-width: 600px) {
+            .bet-controls-grid {
+                grid-template-columns: 1fr;
+                padding: 12px 10px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .bet-amount-row {
+                flex-wrap: wrap;
+            }
+            
+            .bet-input {
+                width: 100%;
+                font-size: 1rem;
+            }
+            
+            .amount-btn {
+                flex: 1;
+                padding: 14px 16px;
+                min-height: 48px;
+                font-size: 1rem;
+            }
+            
+            .target-section {
+                flex-direction: row;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 10px;
+            }
+            
+            .target-value {
+                font-size: 1.4rem;
+            }
+            
+            .btn-place-bet {
+                padding: 12px 24px;
+                font-size: 1rem;
+            }
+        }
+        
+        /* Fixed bottom controls on mobile for game rooms */
+        @media (max-width: 600px) {
+            .room .bet-controls-grid {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: 0;
+                border-radius: 16px 16px 0 0;
+                background: rgba(10, 10, 15, 0.98);
+                backdrop-filter: blur(20px);
+                z-index: 100;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+                border-top: 1px solid var(--glass-border);
+            }
+            
+            .room .game-room-content {
+                padding-bottom: calc(200px + env(safe-area-inset-bottom, 0px));
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+        
+        /* Legacy crash controls (kept for compatibility) */
+        .crash-controls {
+            display: none;
+        }
+        .crash-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 12px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            width: 150px;
+            text-align: center;
+        }
+        .btn-cashout {
+            background: var(--secondary);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .history-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            margin: 0 5px;
+            font-size: 0.8rem;
+            font-family: 'Orbitron';
+        }
+        .history-badge.low { background: rgba(255, 51, 102, 0.2); color: #ff3366; }
+        .history-badge.high { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+
+        /* Collapsible History Section */
+        .history-collapsible {
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+        }
+        .history-collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            cursor: pointer;
+            transition: background 0.2s;
+            user-select: none;
+        }
+        .history-collapsible-header:hover {
+            background: rgba(0, 255, 255, 0.05);
+        }
+        .history-collapsible-header h4 {
+            margin: 0;
+            font-family: 'Orbitron';
+            font-size: 0.9rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .history-chevron {
+            transition: transform 0.3s;
+            color: #94a3b8;
+            font-size: 1.2rem;
+        }
+        .history-collapsible.open .history-chevron {
+            transform: rotate(180deg);
+        }
+        .history-collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .history-collapsible.open .history-collapsible-content {
+            max-height: 500px;
+        }
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 8px;
+            padding: 16px;
+        }
+        .history-grid-item {
+            text-align: center;
+            padding: 8px 4px;
+            border-radius: 10px;
+            font-family: 'Orbitron';
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: default;
+        }
+        .history-grid-item.low {
+            background: rgba(255, 51, 102, 0.15);
+            color: #ff3366;
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+        .history-grid-item.medium {
+            background: rgba(255, 170, 0, 0.15);
+            color: #ffaa00;
+            border: 1px solid rgba(255, 170, 0, 0.3);
+        }
+        .history-grid-item.high {
+            background: rgba(0, 255, 136, 0.15);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        .history-grid-item.jackpot {
+            background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(188, 19, 254, 0.2));
+            color: var(--primary);
+            border: 1px solid rgba(0, 242, 255, 0.4);
+            animation: jackpot-glow 2s infinite alternate;
+        }
+        @keyframes jackpot-glow {
+            from { box-shadow: 0 0 5px rgba(0, 242, 255, 0.3); }
+            to { box-shadow: 0 0 15px rgba(188, 19, 254, 0.5); }
+        }
+        .history-loading {
+            text-align: center;
+            padding: 30px;
+            color: #94a3b8;
+        }
+        @media (max-width: 480px) {
+            .history-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 6px;
+                padding: 12px;
+            }
+            .history-grid-item {
+                padding: 6px 2px;
+                font-size: 0.65rem;
+            }
+        }
+
+        /* Live Bettors Section */
+        .live-bettors-section {
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+        }
+        .live-bettors-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: rgba(0, 255, 255, 0.05);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .live-bettors-header h4 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--primary);
+            flex: 1;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(0, 255, 136, 0); }
+        }
+        .bettor-count {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+        .bettors-list {
+            max-height: 200px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+        .bettor-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+        .bettor-row:hover {
+            background: rgba(0, 255, 255, 0.05);
+        }
+        .bettor-row:last-child {
+            border-bottom: none;
+        }
+        .bettor-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bettor-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .bettor-address {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+        }
+        .bettor-bet {
+            text-align: right;
+        }
+        .bettor-amount {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        .bettor-target {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+        .bettor-status {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 8px;
+            margin-left: 8px;
+        }
+        .bettor-status.playing {
+            background: rgba(0, 255, 255, 0.2);
+            color: var(--primary);
+        }
+        .bettor-status.won {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        .bettor-status.lost {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--danger);
+        }
+
+        /* Fairness Styling */
+        .fairness-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--glass-border);
+            font-size: 0.8rem;
+            text-align: left;
+        }
+        
+        /* Dice Roll Styles - 3D Dice */
+        .dice-result-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+            perspective: 600px;
+        }
+        .dice-3d-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+        }
+        .dice-3d-wrapper.rolling {
+            animation: diceRoll3D 0.5s infinite linear;
+        }
+        .dice-face {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            border: 3px solid rgba(0, 212, 255, 0.6);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                inset 0 2px 20px rgba(255, 255, 255, 0.1),
+                inset 0 -2px 20px rgba(0, 0, 0, 0.3),
+                0 0 40px rgba(0, 212, 255, 0.4),
+                0 10px 30px rgba(0, 0, 0, 0.5);
+            backface-visibility: hidden;
+        }
+        .dice-face.front {
+            transform: translateZ(60px);
+        }
+        .dice-inner-glow {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+            border-radius: 12px;
+        }
+        .dice-face.win {
+            border-color: #00ff88;
+            box-shadow: 
+                inset 0 2px 20px rgba(0, 255, 136, 0.2),
+                inset 0 -2px 20px rgba(0, 0, 0, 0.3),
+                0 0 50px rgba(0, 255, 136, 0.5),
+                0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .dice-face.win .dice-inner-glow {
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.2) 0%, transparent 70%);
+        }
+        .dice-face.lose {
+            border-color: #ff3366;
+            box-shadow: 
+                inset 0 2px 20px rgba(255, 51, 102, 0.2),
+                inset 0 -2px 20px rgba(0, 0, 0, 0.3),
+                0 0 50px rgba(255, 51, 102, 0.5),
+                0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .dice-face.lose .dice-inner-glow {
+            background: radial-gradient(circle, rgba(255, 51, 102, 0.2) 0%, transparent 70%);
+        }
+        @keyframes diceRoll3D {
+            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            25% { transform: rotateX(90deg) rotateY(45deg) rotateZ(45deg); }
+            50% { transform: rotateX(180deg) rotateY(90deg) rotateZ(90deg); }
+            75% { transform: rotateX(270deg) rotateY(135deg) rotateZ(135deg); }
+            100% { transform: rotateX(360deg) rotateY(180deg) rotateZ(180deg); }
+        }
+        #diceResultNumber {
+            font-family: 'Space Grotesk', monospace;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+        .dice-face.win #diceResultNumber {
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        .dice-face.lose #diceResultNumber {
+            color: #ff3366;
+            text-shadow: 0 0 20px rgba(255, 51, 102, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        .dice-result-message {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .dice-result-message.win {
+            color: #00ff88;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        .dice-result-message.lose {
+            color: #ff3366;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+        }
+        
+        /* Dice Main Section - Side by Side Layout */
+        .dice-main-section {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 20px;
+            align-items: stretch;
+        }
+        .dice-main-section .dice-result-container {
+            flex: 0 0 auto;
+            margin-bottom: 0;
+        }
+        .dice-bet-panel {
+            flex: 1;
+            background: rgba(10, 15, 30, 0.6);
+            border-radius: 16px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .dice-stats-row.compact {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .dice-stats-row.compact .dice-stat-box {
+            flex: 1;
+            padding: 8px;
+            min-width: auto;
+        }
+        .dice-stats-row.compact .dice-stat-label {
+            font-size: 0.65rem;
+        }
+        .dice-stats-row.compact .dice-stat-value {
+            font-size: 1rem;
+        }
+        .dice-bet-row {
+            display: flex;
+            gap: 8px;
+        }
+        .dice-bet-row .bet-input {
+            flex: 1;
+        }
+        .dice-win-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .dice-roll-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.1rem;
+        }
+        @media (max-width: 600px) {
+            .dice-main-section {
+                flex-direction: column;
+            }
+        }
+        
+        /* Colorful Slider */
+        .dice-slider-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(10, 15, 30, 0.6);
+            border-radius: 16px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        .dice-slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .slider-label-win {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .slider-label-lose {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ff3366;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .dice-slider-wrapper {
+            position: relative;
+            height: 40px;
+            margin-bottom: 10px;
+        }
+        .dice-slider-track {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 16px;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, 
+                #00ff88 0%,
+                #00ff88 var(--fill-percent, 50%),
+                #ff3366 var(--fill-percent, 50%),
+                #ff3366 100%
+            );
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .dice-slider-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            background: linear-gradient(90deg, #00ff88, #00cc66);
+            border-radius: 8px 0 0 8px;
+            transition: width 0.15s ease;
+        }
+        .dice-slider-marker {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border: 3px solid #00d4ff;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
+            z-index: 5;
+            transition: left 0.3s ease;
+        }
+        .dice-slider-marker.win {
+            border-color: #00ff88;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+        }
+        .dice-slider-marker.lose {
+            border-color: #ff3366;
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.8);
+        }
+        .dice-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .dice-slider-numbers {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .target-number {
+            font-weight: 700;
+            color: #00d4ff;
+            font-size: 1.1rem;
+            background: rgba(0, 212, 255, 0.15);
+            padding: 2px 12px;
+            border-radius: 8px;
+        }
+        
+        /* Dice Stats Row */
+        .dice-stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .dice-stat-box {
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+        .dice-stat-box.highlight {
+            border-color: rgba(0, 212, 255, 0.5);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1));
+        }
+        .dice-stat-label {
+            display: block;
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .dice-stat-value {
+            font-family: 'Space Grotesk', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .dice-stat-box.highlight .dice-stat-value {
+            color: #00d4ff;
+        }
+        
+        /* Dice History */
+        .dice-history-section {
+            background: rgba(10, 15, 30, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 212, 255, 0.15);
+        }
+        .dice-history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .dice-history-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .dice-history-result {
+            font-family: 'Space Grotesk', monospace;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .dice-history-result.win {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        .dice-history-result.lose {
+            background: rgba(255, 51, 102, 0.2);
+            color: #ff3366;
+        }
+        .dice-history-target {
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+        .dice-history-payout {
+            color: #00ff88;
+            font-weight: 600;
+        }
+        
+        /* Price Bet Styles */
+        .price-bet-display {
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .btc-price-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btc-symbol {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f7931a;
+        }
+        .btc-current-price {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            font-weight: 700;
+            color: #fff;
+            font-family: 'Space Grotesk', monospace;
+        }
+        .btc-price-change {
+            font-size: 1rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        .btc-price-change.negative {
+            background: rgba(255, 51, 102, 0.2);
+            color: #ff3366;
+        }
+        .price-chart-container {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        #btcPriceChart {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .price-bet-round-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .round-status-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .round-phase {
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            color: #000;
+        }
+        .round-phase.locked {
+            background: linear-gradient(135deg, #f7931a, #e07c10);
+        }
+        .round-phase.settled {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+        .round-countdown {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00d4ff;
+            font-family: 'Space Grotesk', monospace;
+        }
+        .round-status-right {
+            text-align: right;
+        }
+        .start-price-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+        .start-price-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .price-bet-controls {
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .price-bet-stake {
+            margin-bottom: 20px;
+        }
+        .price-bet-stake label {
+            display: block;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .price-stake-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .potential-win {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: #00ff88;
+        }
+        .price-bet-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .price-up-btn, .price-down-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 100px;
+        }
+        .price-up-btn {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.3), rgba(0, 200, 100, 0.2));
+            border: 2px solid #00ff88;
+        }
+        .price-up-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.5), rgba(0, 200, 100, 0.4));
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
+        }
+        .price-down-btn {
+            background: linear-gradient(135deg, rgba(255, 51, 102, 0.3), rgba(200, 40, 80, 0.2));
+            border: 2px solid #ff3366;
+        }
+        .price-down-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255, 51, 102, 0.5), rgba(200, 40, 80, 0.4));
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(255, 51, 102, 0.4);
+        }
+        .price-up-btn:disabled, .price-down-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .price-up-btn .arrow, .price-down-btn .arrow {
+            font-size: 2rem;
+        }
+        .price-up-btn .arrow { color: #00ff88; }
+        .price-down-btn .arrow { color: #ff3366; }
+        .price-up-btn .label, .price-down-btn .label {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 5px 0;
+        }
+        .price-up-btn .payout, .price-down-btn .payout {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        .price-round-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .price-round-stats .stat-box {
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .price-round-stats .stat-box.up {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        .price-round-stats .stat-box.down {
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+        .price-round-stats .stat-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .price-round-stats .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .price-bet-history {
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .price-bet-history h4 {
+            margin: 0 0 12px 0;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        .price-history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .price-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+        .price-history-direction {
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+        .price-history-direction.up {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        .price-history-direction.down {
+            background: rgba(255, 51, 102, 0.2);
+            color: #ff3366;
+        }
+        .price-history-prices {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        
+        /* Lucky Pot Styles */
+        .pot-display {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, rgba(0, 242, 255, 0.1), rgba(188, 19, 254, 0.1));
+            border-radius: 20px;
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .pot-display::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.1) 0%, transparent 70%);
+            animation: pot-glow 3s ease-in-out infinite;
+        }
+        @keyframes pot-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        .pot-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+        .pot-amount {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            font-weight: 900;
+            background: linear-gradient(90deg, #00f2ff, #bc13fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(0, 242, 255, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+        .pot-countdown {
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 30px;
+            margin-top: 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        .pot-countdown.urgent {
+            color: #ff3366;
+            border-color: rgba(255, 51, 102, 0.5);
+            animation: pulse-urgent 0.5s ease-in-out infinite;
+        }
+        @keyframes pulse-urgent {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .pot-participants {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .pot-participants-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .pot-participants-header h4 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+        .pot-participant {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .pot-participant:last-child {
+            border-bottom: none;
+        }
+        .pot-participant-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pot-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .pot-participant-address {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+        }
+        .pot-participant-amount {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: #00ff88;
+        }
+        .pot-participant-chance {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: var(--primary);
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        .pot-bet-controls {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .pot-quick-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .pot-quick-btn {
+            flex: 1;
+            min-width: 50px;
+            padding: 12px 8px;
+            background: rgba(0, 242, 255, 0.1);
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            border-radius: 10px;
+            color: var(--primary);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pot-quick-btn:hover {
+            background: rgba(0, 242, 255, 0.2);
+            border-color: var(--primary);
+        }
+        .pot-join-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 14px;
+            color: black;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            min-height: 56px;
+        }
+        .pot-join-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.3);
+        }
+        .pot-join-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .pot-winners-feed {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .pot-winners-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .pot-winners-header h4 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #ffd700;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #ff3366;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .pot-winner-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .pot-winner-item:last-child {
+            border-bottom: none;
+        }
+        .pot-winner-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .pot-winner-address {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+        }
+        .pot-winner-chance {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+        .pot-winner-prize {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: #ffd700;
+        }
+        
+        .pot-no-participants {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+        
+        .seed-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 5px 0;
+            color: #94a3b8;
+        }
+        .btn-verify {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-family: 'Orbitron';
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <nav class="navbar">
+        <div class="navbar-brand" onclick="showPage('lobby')">VERSEBET</div>
+        <div class="navbar-actions">
+            <div id="balanceDisplay" class="balance-display" style="display: none; font-family: 'Orbitron'; font-size: 0.7rem;">
+                <span id="siteBalance" style="color: #00ff88; font-weight: bold;">0.00</span>
+                <span style="color: var(--primary);">VERSE</span>
+            </div>
+            <button id="depositBtn" class="btn-connect btn-sm" style="display: none; background: rgba(0, 255, 136, 0.1); border-color: #00ff88; color: #00ff88; padding: 6px 10px; font-size: 0.6rem;" onclick="showDepositModal()">+</button>
+            <button id="withdrawBtn" class="btn-connect btn-sm" style="display: none; background: rgba(255, 51, 102, 0.1); border-color: #ff3366; color: #ff3366; padding: 6px 10px; font-size: 0.6rem;" onclick="showWithdrawModal()">-</button>
+            <button id="soundToggle" class="btn-connect btn-sm" style="padding: 6px 10px; min-width: auto;" onclick="toggleSound()" title="Toggle Sound">🔊</button>
+            <button class="btn-connect" id="connectBtn" onclick="console.log('Button onclick triggered'); connect();" style="padding: 6px 12px; font-size: 0.65rem; position: relative; z-index: 9999;">Connect</button>
+        </div>
+    </nav>
+
+    <!-- Deposit Modal -->
+    <div id="depositModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; align-items: center; justify-content: center;">
+        <div style="background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 30px; max-width: 400px; width: 90%;">
+            <h3 style="font-family: 'Orbitron'; color: var(--primary); margin-bottom: 20px;">Deposit $VERSE</h3>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Deposit VERSE tokens. (Note: You'll need POL/MATIC in your wallet for gas fees)</p>
+            <input type="number" id="depositAmount" class="crash-input" value="1000" min="1" placeholder="Amount to deposit" style="width: 100%; margin-bottom: 15px;">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-bet" onclick="executeDeposit()" style="flex: 1;">Deposit</button>
+                <button class="btn-back" onclick="hideDepositModal()" style="flex: 1;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 30px; max-width: 400px; width: 90%;">
+            <h3 style="font-family: 'Orbitron'; color: #ff3366; margin-bottom: 20px;">Withdraw $VERSE</h3>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px;">Withdraw VERSE tokens. (Note: You'll need POL/MATIC for gas fees)</p>
+            <div style="background: rgba(255,51,102,0.1); border: 1px solid rgba(255,51,102,0.3); border-radius: 12px; padding: 12px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.85rem;">
+                    <span>Network Fee:</span>
+                    <span style="color: #ff3366;">5 VERSE</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.85rem; margin-top: 5px;">
+                    <span>Minimum:</span>
+                    <span style="color: #ff3366;">10 VERSE</span>
+                </div>
+            </div>
+            <input type="number" id="withdrawAmount" class="crash-input" value="100" min="10" placeholder="Amount to withdraw" style="width: 100%; margin-bottom: 10px;">
+            <div id="withdrawSummary" style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 15px; text-align: center;">
+                You'll receive: <span style="color: #00ff88; font-weight: bold;">95 VERSE</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-bet" onclick="executeWithdraw()" style="flex: 1; background: #ff3366;">Withdraw</button>
+                <button class="btn-back" onclick="hideWithdrawModal()" style="flex: 1;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Lobby Page -->
+        <div id="lobby" class="page active">
+            <div class="logo-container">
+                <h1 class="main-logo">VerseBet</h1>
+                <p style="color: #94a3b8; letter-spacing: 4px; text-transform: uppercase; font-size: 0.7rem">Decentralized Elite Gaming</p>
+            </div>
+
+            <div class="game-grid">
+                <div class="card" data-testid="card-crash-pro">
+                    <span class="card-icon">🚀</span>
+                    <div class="card-content">
+                        <h3>Crash Pro</h3>
+                        <p style="color: #94a3b8">The ultimate multiplier game</p>
+                        <button class="btn-bet" onclick="showPage('crash-room')" data-testid="button-play-crash">Play Now</button>
+                    </div>
+                </div>
+                <div class="card" data-testid="card-lucky-pot">
+                    <span class="card-icon">💎</span>
+                    <div class="card-content">
+                        <h3>Lucky Pot</h3>
+                        <p style="color: #94a3b8">Grand Verse jackpot</p>
+                        <button class="btn-bet" onclick="showPage('pot-room')" data-testid="button-play-pot">Play Now</button>
+                    </div>
+                </div>
+                <div class="card" data-testid="card-price-bet">
+                    <span class="card-icon">📈</span>
+                    <div class="card-content">
+                        <h3>Price Bet</h3>
+                        <p style="color: #94a3b8">Predict BTC movement</p>
+                        <button class="btn-bet" onclick="showPage('price-room')" data-testid="button-play-price">Play Now</button>
+                    </div>
+                </div>
+                <div class="card" data-testid="card-dice-roll">
+                    <span class="card-icon">🎲</span>
+                    <div class="card-content">
+                        <h3>Dice Roll</h3>
+                        <p style="color: #94a3b8">Test your luck</p>
+                        <button class="btn-bet" onclick="showPage('dice-room')" data-testid="button-play-dice">Play Now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crash Room -->
+        <div id="crash-room" class="page room">
+            <button class="btn-back" onclick="showPage('lobby')">← Back to Lobby</button>
+            <div class="game-room-content">
+                <div class="room-header">
+                    <h2>Crash Pro</h2>
+                    <p id="crashStatus" style="color: #94a3b8">Waiting for next round...</p>
+                </div>
+                <div class="crash-graph-area">
+                    <canvas id="crashCanvas"></canvas>
+                    <div id="multiplier" class="multiplier-text">1.00x</div>
+                    <div id="countdown" style="position: absolute; font-family: 'Orbitron'; font-size: 2rem; color: var(--primary); display: none;">Next Round in: 5</div>
+                </div>
+                <div class="bet-controls-grid">
+                    <div class="bet-amount-section">
+                        <div class="bet-amount-row">
+                            <input type="number" id="crashBetAmount" class="bet-input" value="100" min="1" max="1000000" placeholder="Bet Amount">
+                            <button class="amount-btn" onclick="adjustBetAmount('crash', 0.5)">1/2</button>
+                            <button class="amount-btn" onclick="adjustBetAmount('crash', 2)">2x</button>
+                        </div>
+                    </div>
+                    <div class="target-section">
+                        <span class="target-label">Target</span>
+                        <span class="target-value" id="crashTargetDisplay">2.00x</span>
+                        <div class="target-input-row">
+                            <input type="number" id="crashMultiplier" class="target-input" value="2.00" min="1.01" max="100" step="0.01" onchange="updateTargetDisplay('crash')" oninput="updateTargetDisplay('crash')">
+                        </div>
+                    </div>
+                    <div class="bet-action-row">
+                        <button id="crashActionBtn" class="btn-place-bet" onclick="handleCrashAction()">Place Bet</button>
+                    </div>
+                </div>
+                <div style="text-align: center;" id="crashHistory"></div>
+
+                <!-- Collapsible Last 50 Rounds -->
+                <div class="history-collapsible" id="historyCollapsible" data-testid="crash-history-collapsible">
+                    <div class="history-collapsible-header" onclick="toggleHistoryCollapsible()" data-testid="button-toggle-history">
+                        <h4>
+                            <span style="font-size: 1.2rem;">📊</span>
+                            Last 50 Rounds
+                        </h4>
+                        <span class="history-chevron">▼</span>
+                    </div>
+                    <div class="history-collapsible-content">
+                        <div id="historyGrid" class="history-grid">
+                            <div class="history-loading">Loading history...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Bettors Section -->
+                <div class="live-bettors-section">
+                    <div class="live-bettors-header">
+                        <span class="live-dot"></span>
+                        <h4>Live Bettors</h4>
+                        <span id="bettorCount" class="bettor-count">0 players</span>
+                    </div>
+                    <div class="bettors-list" id="bettorsList">
+                        <!-- Bettors will be added dynamically -->
+                    </div>
+                </div>
+
+                <div class="fairness-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>PROVABLY FAIR</strong>
+                        <button class="btn-verify" onclick="verifyFairness('crash')">Verify Last Round</button>
+                    </div>
+                    <p>Server Seed (Hashed): <div id="crashServerSeedHash" class="seed-box">-</div></p>
+                    <p style="margin-bottom: 8px;">Your Client Seed:</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                        <input type="text" id="userClientSeed" class="bet-input" style="flex: 1; text-align: left; font-family: monospace; font-size: 0.8rem;" placeholder="Enter your own seed or use random" value="">
+                        <button class="amount-btn" onclick="generateRandomClientSeed()" style="white-space: nowrap;">Random</button>
+                        <button class="amount-btn" onclick="saveClientSeed()" style="background: rgba(0, 255, 136, 0.1); border-color: rgba(0, 255, 136, 0.3); color: #00ff88;">Save</button>
+                    </div>
+                    <p style="font-size: 0.7rem; color: #64748b;">Your seed is combined with the server seed to determine results. Set your own for extra trust.</p>
+                    <p>Active Client Seed: <div id="crashClientSeed" class="seed-box">-</div></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pot Room -->
+        <div id="pot-room" class="page room">
+            <button class="btn-back" onclick="showPage('lobby')" data-testid="button-pot-back">← Back to Lobby</button>
+            <div class="game-room-content">
+                <div class="room-header">
+                    <h2>Lucky Pot</h2>
+                    <p style="color: #94a3b8">Win the entire pot! Your chance = your contribution</p>
+                </div>
+                
+                <!-- Glowing Pot Display -->
+                <div class="pot-display" data-testid="pot-display">
+                    <div class="pot-label">Total Pot</div>
+                    <div class="pot-amount" id="potTotalAmount" data-testid="text-pot-amount">0 VERSE</div>
+                    <div class="pot-countdown" id="potCountdown" data-testid="text-pot-countdown">Draw in 60s</div>
+                </div>
+                
+                <!-- Live Player List -->
+                <div class="pot-participants" data-testid="pot-participants">
+                    <div class="pot-participants-header">
+                        <h4>Players in Pot</h4>
+                        <span id="potPlayerCount" style="color: #94a3b8; font-size: 0.8rem;">0 players</span>
+                    </div>
+                    <div id="potParticipantsList">
+                        <div class="pot-no-participants">No players yet. Be the first to join!</div>
+                    </div>
+                </div>
+                
+                <!-- Betting UI -->
+                <div class="pot-bet-controls">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" id="potBetAmount" class="bet-input" value="100" min="1" max="1000000" placeholder="Bet Amount" data-testid="input-pot-amount" style="flex: 1;">
+                        <span style="color: var(--primary); font-family: 'Orbitron'; font-size: 0.8rem;">VERSE</span>
+                    </div>
+                    <div class="pot-quick-buttons">
+                        <button class="pot-quick-btn" onclick="adjustPotAmount(0.5)" data-testid="button-pot-half">0.5x</button>
+                        <button class="pot-quick-btn" onclick="adjustPotAmount(1)" data-testid="button-pot-1x">1x</button>
+                        <button class="pot-quick-btn" onclick="adjustPotAmount(5)" data-testid="button-pot-5x">5x</button>
+                        <button class="pot-quick-btn" onclick="adjustPotAmountDelta(-100)" data-testid="button-pot-minus">-</button>
+                        <button class="pot-quick-btn" onclick="adjustPotAmountDelta(100)" data-testid="button-pot-plus">+</button>
+                    </div>
+                    <button class="pot-join-btn" id="potJoinBtn" onclick="joinPot()" data-testid="button-join-pot">JOIN POT</button>
+                </div>
+                
+                <!-- Recent Winners Feed -->
+                <div class="pot-winners-feed" data-testid="pot-winners-feed">
+                    <div class="pot-winners-header">
+                        <div class="live-dot"></div>
+                        <h4>Recent Winners</h4>
+                    </div>
+                    <div id="potWinnersList">
+                        <div class="pot-no-participants">No recent winners yet</div>
+                    </div>
+                </div>
+                
+                <div class="fairness-section">
+                    <strong>PROVABLY FAIR</strong>
+                    <p>Server Seed Hash: <div id="potServerSeedHash" class="seed-box">-</div></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price Room -->
+        <div id="price-room" class="page room">
+            <button class="btn-back" onclick="showPage('lobby')">← Back to Lobby</button>
+            <div class="game-room-content" style="max-width: 900px;">
+                <div class="room-header">
+                    <h2>Price Bet</h2>
+                    <p style="color: #94a3b8">Predict if BTC will go UP or DOWN in 60 seconds. Win 1.95x!</p>
+                </div>
+                
+                <!-- BTC Price Display -->
+                <div class="price-bet-display" data-testid="price-bet-display">
+                    <div class="btc-price-header">
+                        <div class="btc-symbol">BTC/USDT</div>
+                        <div class="btc-current-price" id="btcCurrentPrice" data-testid="text-btc-price">$0.00</div>
+                        <div class="btc-price-change" id="btcPriceChange">0.00%</div>
+                    </div>
+                    
+                    <!-- Price Chart Canvas -->
+                    <div class="price-chart-container">
+                        <canvas id="btcPriceChart" width="800" height="200"></canvas>
+                    </div>
+                    
+                    <!-- Round Status -->
+                    <div class="price-bet-round-status" data-testid="price-bet-status">
+                        <div class="round-status-left">
+                            <div class="round-phase" id="priceBetPhase">BETTING OPEN</div>
+                            <div class="round-countdown" id="priceBetCountdown">15s</div>
+                        </div>
+                        <div class="round-status-right">
+                            <div class="start-price-label">Start Price</div>
+                            <div class="start-price-value" id="priceBetStartPrice">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Betting Controls -->
+                <div class="price-bet-controls">
+                    <div class="price-bet-stake">
+                        <label>Stake (VERSE)</label>
+                        <div class="price-stake-input-row">
+                            <input type="number" id="priceBetAmount" class="bet-input" value="100" min="1" max="1000000" placeholder="Bet Amount" data-testid="input-price-stake">
+                            <button class="amount-btn" onclick="adjustBetAmount('price', 0.5)">1/2</button>
+                            <button class="amount-btn" onclick="adjustBetAmount('price', 2)">2x</button>
+                        </div>
+                        <div class="potential-win">
+                            Potential Win: <span id="pricePotentialWin">195</span> VERSE
+                        </div>
+                    </div>
+                    
+                    <div class="price-bet-buttons">
+                        <button class="price-up-btn" id="priceUpBtn" onclick="placePriceBet('up')" data-testid="button-price-up">
+                            <span class="arrow">▲</span>
+                            <span class="label">UP</span>
+                            <span class="payout">1.95x</span>
+                        </button>
+                        <button class="price-down-btn" id="priceDownBtn" onclick="placePriceBet('down')" data-testid="button-price-down">
+                            <span class="arrow">▼</span>
+                            <span class="label">DOWN</span>
+                            <span class="payout">1.95x</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Round Stats -->
+                    <div class="price-round-stats">
+                        <div class="stat-box up">
+                            <div class="stat-label">UP Bets</div>
+                            <div class="stat-value" id="priceUpBets">0</div>
+                        </div>
+                        <div class="stat-box down">
+                            <div class="stat-label">DOWN Bets</div>
+                            <div class="stat-value" id="priceDownBets">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Results -->
+                <div class="price-bet-history" data-testid="price-bet-history">
+                    <h4>Recent Results</h4>
+                    <div id="priceBetHistoryList" class="price-history-list">
+                        <div class="pot-no-participants">No results yet</div>
+                    </div>
+                </div>
+                
+                <div class="fairness-section">
+                    <strong>REAL-TIME PRICE</strong>
+                    <p>Price Feed: <span class="seed-box">Binance API (BTCUSDT)</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dice Room -->
+        <div id="dice-room" class="page room">
+            <button class="btn-back" onclick="showPage('lobby')">← Back to Lobby</button>
+            <div class="game-room-content">
+                <div class="room-header">
+                    <h2>Dice Roll</h2>
+                    <p style="color: #94a3b8">Provably Fair | Roll Under Target to Win</p>
+                </div>
+                
+                <!-- Dice Result + Bet Controls Side by Side -->
+                <div class="dice-main-section">
+                    <!-- Dice Result Display - 3D Dice -->
+                    <div class="dice-result-container" id="diceResultArea">
+                        <div class="dice-3d-wrapper" id="diceWrapper">
+                            <div class="dice-face front" id="diceFace">
+                                <div class="dice-inner-glow"></div>
+                                <span id="diceResultNumber">--</span>
+                            </div>
+                        </div>
+                        <div id="diceResultMessage" class="dice-result-message">Place a bet to roll</div>
+                    </div>
+                    
+                    <!-- Bet Controls - Right Side -->
+                    <div class="dice-bet-panel">
+                        <!-- Stats Row -->
+                        <div class="dice-stats-row compact">
+                            <div class="dice-stat-box">
+                                <span class="dice-stat-label">Roll Under</span>
+                                <span class="dice-stat-value" id="diceRollUnder">50</span>
+                            </div>
+                            <div class="dice-stat-box highlight">
+                                <span class="dice-stat-label">Multiplier</span>
+                                <span class="dice-stat-value" id="diceMultiplier">1.96x</span>
+                            </div>
+                            <div class="dice-stat-box">
+                                <span class="dice-stat-label">Win Chance</span>
+                                <span class="dice-stat-value" id="diceWinChance">50%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Bet Amount -->
+                        <div class="dice-bet-row">
+                            <input type="number" id="diceBetAmount" class="bet-input" value="100" min="1" max="1000000" placeholder="Bet Amount" data-testid="input-dice-amount">
+                            <button class="amount-btn" onclick="adjustBetAmount('dice', 0.5)" data-testid="button-dice-half">1/2</button>
+                            <button class="amount-btn" onclick="adjustBetAmount('dice', 2)" data-testid="button-dice-double">2x</button>
+                        </div>
+                        
+                        <!-- Potential Win -->
+                        <div class="dice-win-display">
+                            <span class="target-label">Potential Win:</span>
+                            <span class="target-value" id="dicePotentialWin" style="color: #10b981;">0 VERSE</span>
+                        </div>
+                        
+                        <!-- Roll Button -->
+                        <button id="diceRollBtn" class="btn-place-bet dice-roll-btn" onclick="placeDiceBet()" data-testid="button-dice-roll">Roll Dice</button>
+                    </div>
+                </div>
+                
+                <!-- Colorful Slider Section -->
+                <div class="dice-slider-section">
+                    <div class="dice-slider-labels">
+                        <span class="slider-label-win">WIN ZONE</span>
+                        <span class="slider-label-lose">LOSE ZONE</span>
+                    </div>
+                    <div class="dice-slider-wrapper">
+                        <div class="dice-slider-track" id="diceSliderTrack">
+                            <div class="dice-slider-fill" id="diceSliderFill"></div>
+                            <div class="dice-slider-marker" id="diceResultMarker" style="display: none;"></div>
+                        </div>
+                        <input type="range" id="diceTargetSlider" class="dice-slider" min="1" max="98" value="50" oninput="updateDiceTarget(this.value)">
+                    </div>
+                    <div class="dice-slider-numbers">
+                        <span>0</span>
+                        <span id="diceTargetValue" class="target-number">50</span>
+                        <span>99</span>
+                    </div>
+                </div>
+                
+                <!-- Your Recent Bets (Individual) -->
+                <div class="dice-history-section">
+                    <h4 style="color: var(--text); margin-bottom: 10px;">Your Recent Rolls</h4>
+                    <div id="diceHistoryList" class="dice-history-list">
+                        <div class="pot-no-participants">No rolls yet</div>
+                    </div>
+                </div>
+                
+                <!-- Provably Fair - Shows after bet -->
+                <div id="diceFairnessSection" class="fairness-section" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>LAST BET VERIFICATION</strong>
+                        <button class="btn-verify" onclick="rotateDiceSeed()" data-testid="button-rotate-seed">New Seeds</button>
+                    </div>
+                    <p style="margin-top: 10px;">Server Seed: <div id="diceRevealedSeed" class="seed-box" style="font-size: 10px; word-break: break-all;">-</div></p>
+                    <p>Client Seed: <span id="diceUsedClientSeed" style="color: var(--primary); font-size: 11px;">-</span></p>
+                    <p>Nonce: <span id="diceUsedNonce" style="color: var(--primary);">-</span></p>
+                    <p>Result: <span id="diceVerifyResult" style="color: var(--secondary);">-</span></p>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">Verify: SHA256(serverSeed:clientSeed:nonce) mod 100</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Crash game state variables - must be declared before socket listeners
+        let crashInterval, crashMultiplier = 1.0, isCrashed = false, crashPoints = [];
+        let gameState = 'waiting'; // waiting, playing, crashed
+        let currentBet = null;
+        let countdownTimer = null;
+        let liveBettors = [];
+        let currentPage = 'lobby';
+        
+        const socket = io();
+        socket.on('connect_error', (err) => {
+            console.error('Socket connection error:', err);
+        });
+        
+        socket.on('crash_state', (data) => {
+            // Update local state from server
+            gameState = data.status;
+            crashMultiplier = data.multiplier;
+            
+            const multiplierEl = document.getElementById('multiplier');
+            const countdownEl = document.getElementById('countdown');
+            const actionBtn = document.getElementById('crashActionBtn');
+            const statusEl = document.getElementById('crashStatus');
+            const c = document.getElementById('crashCanvas');
+
+            if (data.status === 'waiting') {
+                // Reset canvas for new round
+                crashPoints = [];
+                if (c) {
+                    const ctx = c.getContext('2d');
+                    ctx.clearRect(0, 0, c.width, c.height);
+                }
+                
+                // Clear bettors for new round
+                clearBettors();
+                
+                if (multiplierEl) {
+                    multiplierEl.style.display = 'none';
+                    multiplierEl.classList.remove('crashed');
+                }
+                if (countdownEl) {
+                    countdownEl.style.display = 'block';
+                    countdownEl.innerText = "Next Round in: " + data.countdown;
+                    if (data.countdown <= 3 && currentPage === 'crash-room') playSound('countdown');
+                }
+                if (statusEl) statusEl.innerText = "Betting Open!";
+                if (actionBtn && !currentBet) {
+                    actionBtn.innerText = "Place Bet";
+                    actionBtn.disabled = false;
+                    actionBtn.style.background = "";
+                }
+            } else if (data.status === 'playing') {
+                if (multiplierEl) {
+                    multiplierEl.style.display = 'block';
+                    multiplierEl.innerText = data.multiplier.toFixed(2) + "x";
+                    multiplierEl.classList.remove('crashed');
+                }
+                if (countdownEl) countdownEl.style.display = 'none';
+                if (statusEl) statusEl.innerText = "Rocket Flying!";
+                
+                // Play rising sound as multiplier increases (only in crash room)
+                if (currentPage === 'crash-room' && Math.random() < 0.12) {
+                    playRisingSound(data.multiplier);
+                }
+                
+                // Draw enhanced digital graph with rocket
+                if (c) {
+                    const ctx = c.getContext('2d');
+                    const x = (data.multiplier - 1) * (c.width / 5);
+                    const y = c.height - ((data.multiplier - 1) * (c.height / 5));
+                    crashPoints.push({ x, y });
+                    
+                    ctx.clearRect(0, 0, c.width, c.height);
+                    
+                    // Draw digital grid background
+                    ctx.strokeStyle = 'rgba(0, 242, 255, 0.08)';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < c.width; i += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, 0);
+                        ctx.lineTo(i, c.height);
+                        ctx.stroke();
+                    }
+                    for (let i = 0; i < c.height; i += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, i);
+                        ctx.lineTo(c.width, i);
+                        ctx.stroke();
+                    }
+                    
+                    // Draw gradient fill under curve
+                    if (crashPoints.length > 1) {
+                        const gradient = ctx.createLinearGradient(0, c.height, 0, 0);
+                        gradient.addColorStop(0, 'rgba(0, 242, 255, 0.0)');
+                        gradient.addColorStop(0.5, 'rgba(0, 242, 255, 0.15)');
+                        gradient.addColorStop(1, 'rgba(138, 43, 226, 0.4)');
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(0, c.height);
+                        crashPoints.forEach(p => ctx.lineTo(p.x, p.y));
+                        ctx.lineTo(crashPoints[crashPoints.length-1].x, c.height);
+                        ctx.closePath();
+                        ctx.fillStyle = gradient;
+                        ctx.fill();
+                    }
+                    
+                    // Draw glowing curve line
+                    ctx.beginPath(); 
+                    ctx.strokeStyle = '#00f2ff'; 
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#00f2ff';
+                    ctx.moveTo(0, c.height); 
+                    crashPoints.forEach(p => ctx.lineTo(p.x, p.y)); 
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                    
+                    // Draw rocket at end of curve
+                    if (crashPoints.length > 0) {
+                        const lastPoint = crashPoints[crashPoints.length - 1];
+                        const prevPoint = crashPoints.length > 1 ? crashPoints[crashPoints.length - 2] : { x: 0, y: c.height };
+                        const angle = Math.atan2(lastPoint.y - prevPoint.y, lastPoint.x - prevPoint.x);
+                        
+                        ctx.save();
+                        ctx.translate(lastPoint.x, lastPoint.y);
+                        ctx.rotate(angle);
+                        
+                        // Rocket body (purple)
+                        ctx.fillStyle = '#8b5cf6';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = '#8b5cf6';
+                        ctx.beginPath();
+                        ctx.moveTo(18, 0);
+                        ctx.lineTo(-8, -7);
+                        ctx.lineTo(-8, 7);
+                        ctx.closePath();
+                        ctx.fill();
+                        
+                        // Rocket flame (orange)
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = '#ff6b35';
+                        ctx.fillStyle = '#ff6b35';
+                        ctx.beginPath();
+                        ctx.moveTo(-8, -4);
+                        ctx.lineTo(-22 - Math.random() * 8, 0);
+                        ctx.lineTo(-8, 4);
+                        ctx.closePath();
+                        ctx.fill();
+                        
+                        // Inner flame (yellow)
+                        ctx.fillStyle = '#ffcc00';
+                        ctx.beginPath();
+                        ctx.moveTo(-8, -2);
+                        ctx.lineTo(-14 - Math.random() * 4, 0);
+                        ctx.lineTo(-8, 2);
+                        ctx.closePath();
+                        ctx.fill();
+                        
+                        ctx.restore();
+                    }
+                }
+                
+                if (actionBtn && currentBet) {
+                    actionBtn.innerText = "Cash Out";
+                    actionBtn.style.background = "var(--secondary)";
+                    actionBtn.disabled = false;
+                }
+            } else if (data.status === 'crashed') {
+                if (currentPage === 'crash-room') playSound('crash');
+                if (multiplierEl) {
+                    multiplierEl.innerText = "CRASHED @ " + data.multiplier.toFixed(2) + "x";
+                    multiplierEl.classList.add('crashed');
+                }
+                if (statusEl) statusEl.innerText = "Crashed!";
+                if (actionBtn) {
+                    actionBtn.innerText = "Preparing...";
+                    actionBtn.disabled = true;
+                }
+                
+                // Update all playing bettors as lost
+                liveBettors.forEach(b => {
+                    if (b.status === 'playing') {
+                        b.status = 'lost';
+                    }
+                });
+                updateBettorsList();
+                
+                // Update real user status if they had a bet
+                if (currentBet && userWalletAddress) {
+                    updateBettorStatus(userWalletAddress, 'lost');
+                }
+                
+                currentBet = null;
+            }
+
+            // Update history with correct class names
+            const historyEl = document.getElementById('crashHistory');
+            if (historyEl && data.history) {
+                historyEl.innerHTML = data.history.map(h => 
+                    `<div class="history-badge ${parseFloat(h.multiplier) < 2 ? 'low' : 'high'}">${h.multiplier}x</div>`
+                ).join('');
+            }
+            
+            // Refresh collapsible history if open
+            if (data.status === 'crashed') {
+                setTimeout(refreshCrashHistory, 500);
+            }
+        });
+        
+        // Listen for other players' bets
+        socket.on('crash_bet', (data) => {
+            addBettor(data.address, data.amount, data.target);
+        });
+        
+        // Listen for other players' cashouts
+        socket.on('crash_cashout', (data) => {
+            updateBettorStatus(data.address, 'won', data.payout, data.multiplier);
+        });
+        
+        // ============ LUCKY POT SOCKET HANDLERS (deferred until functions loaded) ============
+        // Note: Pot handlers are attached after pot functions are defined below
+
+        const config = {
+            verse: "0xc708D6F2153933DAA50B2D0758955Be0A93A8FEc",
+            pot: "0x04623a2A6022bD124cd8ae810C020d34580084F0",
+            price: "0xA6284F9091883105da83c186C4c239497b980dBa",
+            dice: "0x207f547E2D0c159cbaf388f73d273bD2d41B50Ff",
+            crash: "0x350f1403A150C1cF37590417D35a32f6497d3Ed4"
+        };
+        
+        // VerseVaultV3 contract on Polygon (signed voucher withdrawals)
+        const VAULT_ADDRESS = "0x1333BEE6504C838ee9ca643a60Ff9fba0b31F64e";
+
+        const betAmount = "10000";
+        let signer, provider;
+        let userWalletAddress = null;
+        let siteBalanceWei = "0";
+
+        // AppKit modal is initialized in walletConfig.js
+        let appKitModal = null;
+
+        // Sound System using Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let soundEnabled = true;
+        
+        function playSound(type) {
+            if (!soundEnabled) return;
+            
+            try {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                switch(type) {
+                    case 'win':
+                        // Happy winning sound - ascending notes
+                        oscillator.frequency.setValueAtTime(523, audioCtx.currentTime); // C5
+                        oscillator.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1); // E5
+                        oscillator.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2); // G5
+                        oscillator.frequency.setValueAtTime(1047, audioCtx.currentTime + 0.3); // C6
+                        oscillator.type = 'sine';
+                        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.5);
+                        break;
+                        
+                    case 'lose':
+                        // Sad losing sound - descending notes
+                        oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+                        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime + 0.15);
+                        oscillator.frequency.setValueAtTime(200, audioCtx.currentTime + 0.3);
+                        oscillator.type = 'sawtooth';
+                        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.4);
+                        break;
+                        
+                    case 'crash':
+                        // Explosion/crash sound
+                        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+                        oscillator.type = 'sawtooth';
+                        gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.3);
+                        break;
+                        
+                    case 'tick':
+                        // Multiplier tick sound
+                        oscillator.frequency.setValueAtTime(800 + Math.random() * 200, audioCtx.currentTime);
+                        oscillator.type = 'sine';
+                        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.05);
+                        break;
+                        
+                    case 'bet':
+                        // Bet placed sound
+                        oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+                        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime + 0.05);
+                        oscillator.type = 'square';
+                        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.1);
+                        break;
+                        
+                    case 'dice':
+                        // Dice rolling sound - multiple quick ticks
+                        for (let i = 0; i < 8; i++) {
+                            setTimeout(() => {
+                                const osc = audioCtx.createOscillator();
+                                const gain = audioCtx.createGain();
+                                osc.connect(gain);
+                                gain.connect(audioCtx.destination);
+                                osc.frequency.setValueAtTime(200 + Math.random() * 400, audioCtx.currentTime);
+                                osc.type = 'triangle';
+                                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                                osc.start(audioCtx.currentTime);
+                                osc.stop(audioCtx.currentTime + 0.05);
+                            }, i * 50);
+                        }
+                        return;
+                        
+                    case 'countdown':
+                        // Countdown beep
+                        oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                        oscillator.type = 'sine';
+                        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.1);
+                        break;
+                        
+                    case 'jackpot':
+                        // Big win jackpot sound
+                        for (let i = 0; i < 5; i++) {
+                            setTimeout(() => {
+                                const osc = audioCtx.createOscillator();
+                                const gain = audioCtx.createGain();
+                                osc.connect(gain);
+                                gain.connect(audioCtx.destination);
+                                osc.frequency.setValueAtTime(523 * (1 + i * 0.2), audioCtx.currentTime);
+                                osc.type = 'sine';
+                                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                                osc.start(audioCtx.currentTime);
+                                osc.stop(audioCtx.currentTime + 0.15);
+                            }, i * 100);
+                        }
+                        return;
+                        
+                    case 'cashout':
+                        // Cashout success sound
+                        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                        oscillator.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
+                        oscillator.frequency.setValueAtTime(1320, audioCtx.currentTime + 0.2);
+                        oscillator.type = 'sine';
+                        gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.35);
+                        break;
+                }
+            } catch (e) {
+                console.log("Sound error:", e);
+            }
+        }
+        
+        // Resume audio context on user interaction (browser requirement)
+        document.addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }, { once: true });
+        
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundToggle');
+            if (btn) {
+                btn.innerText = soundEnabled ? '🔊' : '🔇';
+                btn.style.opacity = soundEnabled ? '1' : '0.5';
+            }
+            if (soundEnabled) {
+                playSound('bet'); // Play a short sound to confirm
+            }
+        }
+
+        // ============ COLLAPSIBLE HISTORY FUNCTIONS ============
+        
+        function toggleHistoryCollapsible() {
+            const collapsible = document.getElementById('historyCollapsible');
+            if (collapsible) {
+                collapsible.classList.toggle('open');
+                if (collapsible.classList.contains('open')) {
+                    fetchCrashHistory();
+                }
+            }
+        }
+        
+        async function fetchCrashHistory() {
+            const historyGrid = document.getElementById('historyGrid');
+            if (!historyGrid) return;
+            
+            historyGrid.innerHTML = '<div class="history-loading">Loading history...</div>';
+            
+            try {
+                const res = await fetch('/api/crash/history');
+                const data = await res.json();
+                
+                if (!data || data.length === 0) {
+                    historyGrid.innerHTML = '<div class="history-loading">No history yet</div>';
+                    return;
+                }
+                
+                const first50 = data.slice(0, 50);
+                historyGrid.innerHTML = first50.map(entry => {
+                    const mult = parseFloat(entry.multiplier);
+                    let colorClass = 'low';
+                    if (mult >= 10) colorClass = 'jackpot';
+                    else if (mult >= 3) colorClass = 'high';
+                    else if (mult >= 1.5) colorClass = 'medium';
+                    
+                    return `<div class="history-grid-item ${colorClass}" title="Game #${entry.id}">${mult.toFixed(2)}x</div>`;
+                }).join('');
+            } catch (e) {
+                console.error('Failed to fetch crash history:', e);
+                historyGrid.innerHTML = '<div class="history-loading">Failed to load history</div>';
+            }
+        }
+        
+        // Fetch history on page load for crash room
+        function refreshCrashHistory() {
+            const collapsible = document.getElementById('historyCollapsible');
+            if (collapsible && collapsible.classList.contains('open')) {
+                fetchCrashHistory();
+            }
+        }
+        
+        // Rising pitch sound as multiplier goes up
+        function playRisingSound(multiplier) {
+            if (!soundEnabled) return;
+            
+            try {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                // Frequency increases with multiplier (200Hz base + multiplier effect)
+                const baseFreq = 300 + (multiplier * 50);
+                const freq = Math.min(baseFreq, 1200); // Cap at 1200Hz
+                
+                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                oscillator.frequency.setValueAtTime(freq * 1.1, audioCtx.currentTime + 0.05);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.08);
+            } catch (e) {
+                // Ignore sound errors
+            }
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ',
+                win: '🏆'
+            };
+            
+            const titles = {
+                success: 'Success',
+                error: 'Error',
+                warning: 'Warning',
+                info: 'Info',
+                win: 'You Won!'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type] || icons.info}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${titles[type] || titles.info}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.classList.add('toast-exit'); setTimeout(() => this.parentElement.remove(), 300);">✕</button>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.add('toast-exit');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, duration);
+        }
+
+        async function initAppKit() {
+            if (appKitModal) {
+                console.log("AppKit already initialized in page");
+                return appKitModal;
+            }
+            
+            console.log("Starting AppKit initialization...");
+            
+            try {
+                const module = await import('./src/walletConfig.js');
+                
+                // Check if modal already exists in module (from previous init)
+                if (module.getModal && module.getModal()) {
+                    appKitModal = module.getModal();
+                    console.log("Using existing AppKit modal from module");
+                } else if (module.initModal) {
+                    appKitModal = await module.initModal();
+                    console.log("AppKit modal initialized:", !!appKitModal);
+                } else {
+                    console.error("initModal function not found in module");
+                    return null;
+                }
+                
+                if (!appKitModal) {
+                    console.error("AppKit modal is null after initialization");
+                    return null;
+                }
+                
+                // Subscribe to state changes for address updates
+                appKitModal.subscribeState(async (state) => {
+                    console.log("AppKit state changed:", state);
+                    if (state.open === false) {
+                        // Modal closed, check if connected
+                        await checkConnection();
+                    }
+                });
+                
+                // Subscribe to account/address changes
+                appKitModal.subscribeAccount(async (account) => {
+                    console.log("AppKit account changed:", account);
+                    if (account.address && account.isConnected) {
+                        await handleWalletConnected(account.address);
+                    } else if (!account.isConnected) {
+                        handleWalletDisconnected();
+                    }
+                });
+                
+                // Check if already connected
+                await checkConnection();
+            } catch (e) {
+                console.error("AppKit init failed:", e);
+            }
+        }
+        
+        async function handleWalletConnected(address) {
+            userWalletAddress = address;
+            
+            // Get provider from wallet (now using wagmi)
+            try {
+                const walletProvider = await appKitModal.getWalletProvider();
+                if (walletProvider) {
+                    provider = new ethers.providers.Web3Provider(walletProvider);
+                    signer = provider.getSigner();
+                }
+            } catch (e) {
+                console.warn("Could not get wallet provider:", e);
+            }
+            
+            const btn = document.getElementById('connectBtn');
+            btn.innerText = address.substring(0, 6) + "..." + address.substring(38);
+            btn.classList.add('connected');
+            
+            // Show balance UI
+            document.getElementById('balanceDisplay').style.display = 'block';
+            document.getElementById('depositBtn').style.display = 'block';
+            document.getElementById('withdrawBtn').style.display = 'block';
+            
+            // Fetch site balance
+            await fetchSiteBalance();
+        }
+        
+        function handleWalletDisconnected() {
+            userWalletAddress = null;
+            signer = null;
+            provider = null;
+            siteBalanceWei = "0";
+            
+            const btn = document.getElementById('connectBtn');
+            btn.innerText = "Connect Wallet";
+            btn.classList.remove('connected');
+            
+            document.getElementById('balanceDisplay').style.display = 'none';
+            document.getElementById('depositBtn').style.display = 'none';
+            document.getElementById('withdrawBtn').style.display = 'none';
+            updateBalanceDisplay();
+        }
+        
+        async function checkConnection() {
+            if (!appKitModal) return;
+            
+            try {
+                // Use getAddress() method - if address exists, we're connected
+                const address = appKitModal.getAddress();
+                
+                if (address) {
+                    await handleWalletConnected(address);
+                }
+            } catch (e) {
+                console.error("Check connection failed:", e);
+            }
+        }
+
+        async function connect() {
+            console.log("Connect button clicked!");
+            const btn = document.getElementById('connectBtn');
+            const originalText = btn.innerText;
+            
+            // Show loading state
+            btn.innerText = "Loading...";
+            btn.disabled = true;
+            
+            try {
+                if (!appKitModal) {
+                    console.log("AppKit not initialized, initializing now...");
+                    await initAppKit();
+                }
+                
+                if (!appKitModal) {
+                    console.error("AppKit modal not initialized after initAppKit()");
+                    showToast("Wallet service unavailable. Please refresh the page.", "error");
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+                
+                // Check if already connected
+                const currentAddress = appKitModal.getAddress();
+                console.log("Current address:", currentAddress);
+                
+                // Restore button state before opening modal
+                btn.innerText = originalText;
+                btn.disabled = false;
+                
+                if (currentAddress) {
+                    // Already connected, open account view
+                    console.log("Already connected, opening account view...");
+                    await appKitModal.open({ view: 'Account' });
+                } else {
+                    // Not connected, open connect view
+                    console.log("Not connected, opening connect view...");
+                    await appKitModal.open({ view: 'Connect' });
+                }
+            } catch (e) {
+                console.error("Connection failed:", e);
+                showToast("Connection failed: " + (e.message || "Unknown error"), "error");
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function fetchSiteBalance() {
+            if (!userWalletAddress) return;
+            try {
+                const res = await fetch(`/api/balance/${userWalletAddress}`);
+                const data = await res.json();
+                siteBalanceWei = data.balance || "0";
+                updateBalanceDisplay();
+            } catch (e) {
+                console.error("Failed to fetch balance:", e);
+            }
+        }
+
+        function updateBalanceDisplay() {
+            const balanceEl = document.getElementById('siteBalance');
+            if (balanceEl) {
+                const balanceVerse = parseFloat(ethers.utils.formatEther(siteBalanceWei));
+                balanceEl.innerText = balanceVerse.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        }
+
+        function showDepositModal() {
+            document.getElementById('depositModal').style.display = 'flex';
+        }
+        function hideDepositModal() {
+            document.getElementById('depositModal').style.display = 'none';
+        }
+        function showWithdrawModal() {
+            document.getElementById('withdrawModal').style.display = 'flex';
+            updateWithdrawSummary();
+        }
+        function hideWithdrawModal() {
+            document.getElementById('withdrawModal').style.display = 'none';
+        }
+        function updateWithdrawSummary() {
+            const amount = parseFloat(document.getElementById('withdrawAmount').value) || 0;
+            const fee = 5;
+            const receive = Math.max(0, amount - fee);
+            document.getElementById('withdrawSummary').innerHTML = 
+                `You'll receive: <span style="color: #00ff88; font-weight: bold;">${receive.toFixed(2)} VERSE</span>`;
+        }
+        document.getElementById('withdrawAmount').addEventListener('input', updateWithdrawSummary);
+
+        async function executeDeposit() {
+            if (!signer || !userWalletAddress) {
+                showToast("Please connect wallet first", "warning");
+                return;
+            }
+            
+            const amountInput = document.getElementById('depositAmount');
+            const amount = parseFloat(amountInput.value);
+            if (amount <= 0) return showToast("Enter valid amount", "warning");
+            
+            const amountWei = ethers.utils.parseEther(amount.toString());
+            
+            try {
+                // First approve VERSE tokens to vault
+                const verseContract = new ethers.Contract(config.verse, [
+                    "function approve(address spender, uint256 amount) external returns (bool)",
+                    "function allowance(address owner, address spender) external view returns (uint256)"
+                ], signer);
+                
+                // Check allowance
+                const allowance = await verseContract.allowance(userWalletAddress, VAULT_ADDRESS);
+                if (allowance.lt(amountWei)) {
+                    const approveTx = await verseContract.approve(VAULT_ADDRESS, ethers.constants.MaxUint256);
+                    await approveTx.wait();
+                }
+                
+                // Deposit to vault
+                const vaultContract = new ethers.Contract(VAULT_ADDRESS, [
+                    "function deposit(uint256 amount) external"
+                ], signer);
+                
+                const depositTx = await vaultContract.deposit(amountWei);
+                await depositTx.wait();
+                
+                // Credit balance on server
+                const res = await fetch('/api/deposit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: userWalletAddress,
+                        amount: amountWei.toString(),
+                        txHash: depositTx.hash
+                    })
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    siteBalanceWei = data.balance;
+                    updateBalanceDisplay();
+                    hideDepositModal();
+                    showToast("Deposit successful! Your site balance has been updated.", "success");
+                } else {
+                    showToast("Deposit failed: " + (data.error || "Unknown error"), "error");
+                }
+            } catch (e) {
+                console.error("Deposit error:", e);
+                showToast("Deposit failed: " + (e.message || e), "error");
+            }
+        }
+
+        async function executeWithdraw() {
+            if (!signer || !userWalletAddress) {
+                showToast("Please connect wallet first", "warning");
+                return;
+            }
+            
+            const amountInput = document.getElementById('withdrawAmount');
+            const amount = parseFloat(amountInput.value);
+            if (amount < 10) return showToast("Minimum withdrawal is 10 VERSE", "warning");
+            
+            const amountWei = ethers.utils.parseEther(amount.toString());
+            
+            // Check if balance is sufficient
+            if (BigInt(amountWei.toString()) > BigInt(siteBalanceWei)) {
+                return showToast("Insufficient site balance", "error");
+            }
+            
+            try {
+                showToast("Requesting withdrawal voucher...", "info");
+                
+                // Step 1: Get signed voucher from server
+                const res = await fetch('/api/withdraw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: userWalletAddress,
+                        amount: amountWei.toString()
+                    })
+                });
+                
+                const data = await res.json();
+                if (!data.success || !data.voucher) {
+                    return showToast("Withdrawal failed: " + (data.error || "Unknown error"), "error");
+                }
+                
+                // Update balance immediately
+                siteBalanceWei = data.balance;
+                updateBalanceDisplay();
+                
+                showToast("Please confirm withdrawal in your wallet...", "info");
+                
+                // Step 2: Call vault contract with voucher
+                const vaultContract = new ethers.Contract(VAULT_ADDRESS, [
+                    "function withdrawWithVoucher(uint256 amount, uint256 nonce, uint256 expiry, bytes calldata signature) external"
+                ], signer);
+                
+                const tx = await vaultContract.withdrawWithVoucher(
+                    data.voucher.amount,
+                    data.voucher.nonce,
+                    data.voucher.expiry,
+                    data.voucher.signature
+                );
+                
+                showToast("Transaction submitted! Waiting for confirmation...", "info");
+                
+                const receipt = await tx.wait();
+                hideWithdrawModal();
+                showToast("Withdrawal successful! Tokens sent to your wallet.", "win");
+                
+            } catch (e) {
+                console.error("Withdraw error:", e);
+                
+                // Refund the balance since on-chain tx failed
+                if (data && data.voucher) {
+                    try {
+                        showToast("Transaction failed. Refunding balance...", "warning");
+                        const refundRes = await fetch('/api/withdraw/refund', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                walletAddress: userWalletAddress,
+                                amount: data.voucher.amount,
+                                nonce: data.voucher.nonce
+                            })
+                        });
+                        const refundData = await refundRes.json();
+                        if (refundData.success) {
+                            siteBalanceWei = refundData.balance;
+                            updateBalanceDisplay();
+                            showToast("Balance refunded! Vault may not have enough tokens.", "info");
+                        }
+                    } catch (refundErr) {
+                        console.error("Refund error:", refundErr);
+                    }
+                } else {
+                    showToast("Withdrawal failed: " + (e.message || e), "error");
+                }
+            }
+        }
+
+        async function disconnect() {
+            if (appKitModal) {
+                try {
+                    await appKitModal.disconnect();
+                } catch (e) {
+                    console.warn("Disconnect error:", e);
+                }
+            }
+            handleWalletDisconnected();
+        }
+
+        // currentPage is declared at top
+        
+        function showPage(pageId) {
+            currentPage = pageId;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            // Stop crash visuals if leaving room
+            if (pageId !== 'crash-room') {
+                isCrashed = true;
+                clearInterval(crashInterval);
+            } else {
+                // Initialize canvas on entering crash room
+                setTimeout(initCanvas, 100);
+            }
+        }
+
+        // Fairness Logic
+        let currentServerSeed = "";
+        let currentClientSeed = "";
+        let userClientSeed = localStorage.getItem('verseBetClientSeed') || "";
+
+        function generateSeeds() {
+            currentServerSeed = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            currentClientSeed = userClientSeed || Math.random().toString(36).substring(2, 10);
+            
+            const hash = ethers.utils.id(currentServerSeed);
+            document.getElementById('crashServerSeedHash').innerText = hash;
+            document.getElementById('crashClientSeed').innerText = currentClientSeed;
+            
+            // Show saved seed in input
+            const seedInput = document.getElementById('userClientSeed');
+            if (seedInput && userClientSeed) {
+                seedInput.value = userClientSeed;
+            }
+        }
+        
+        function generateRandomClientSeed() {
+            const randomSeed = crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').substring(0, 16) : 
+                Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+            document.getElementById('userClientSeed').value = randomSeed;
+            showToast("Random seed generated! Click Save to use it.", "info");
+        }
+        
+        function saveClientSeed() {
+            const input = document.getElementById('userClientSeed');
+            const newSeed = input.value.trim();
+            
+            if (!newSeed) {
+                // Clear saved seed, use random
+                localStorage.removeItem('verseBetClientSeed');
+                userClientSeed = "";
+                currentClientSeed = Math.random().toString(36).substring(2, 10);
+                document.getElementById('crashClientSeed').innerText = currentClientSeed;
+                showToast("Client seed cleared. Using random seed.", "info");
+                return;
+            }
+            
+            if (newSeed.length < 4) {
+                showToast("Seed must be at least 4 characters", "warning");
+                return;
+            }
+            
+            userClientSeed = newSeed;
+            currentClientSeed = newSeed;
+            localStorage.setItem('verseBetClientSeed', newSeed);
+            document.getElementById('crashClientSeed').innerText = newSeed;
+            showToast("Client seed saved! It will be used for all your bets.", "success");
+        }
+        
+        function initClientSeedUI() {
+            const seedInput = document.getElementById('userClientSeed');
+            if (seedInput && userClientSeed) {
+                seedInput.value = userClientSeed;
+                currentClientSeed = userClientSeed;
+                const display = document.getElementById('crashClientSeed');
+                if (display) display.innerText = userClientSeed;
+            }
+        }
+
+        function verifyFairness(game) {
+            if (game === 'crash') {
+                showToast(`Verified! Server Seed: ${currentServerSeed.substring(0,10)}... Client Seed: ${currentClientSeed.substring(0,10)}...`, "success", 6000);
+            } else {
+                showToast("This game uses on-chain Chainlink VRF for provable fairness.", "info", 5000);
+            }
+        }
+
+        async function play(gameType, param) {
+            if(!userWalletAddress) return showToast("Please connect wallet first!", "warning");
+            
+            let amountInput;
+            if(gameType === 'crash') {
+                const el = document.getElementById('crashBetAmount');
+                amountInput = el ? el.value : "100";
+            } else if (gameType === 'dice') {
+                const el = document.getElementById('diceBetAmount');
+                amountInput = el ? el.value : "100";
+            } else if (gameType === 'price') {
+                const el = document.getElementById('priceBetAmount');
+                amountInput = el ? el.value : "100";
+            } else if (gameType === 'pot') {
+                const el = document.getElementById('potBetAmount');
+                amountInput = el ? el.value : "100";
+            } else {
+                amountInput = "100";
+            }
+
+            const amount = parseFloat(amountInput);
+            if (isNaN(amount) || amount < 1 || amount > 1000000) {
+                return showToast("Bet amount must be between 1 and 1,000,000 VERSE", "warning");
+            }
+
+            const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
+            
+            // Check site balance
+            if (BigInt(amountWei.toString()) > BigInt(siteBalanceWei)) {
+                return showToast("Insufficient site balance! Please deposit more VERSE.", "error");
+            }
+
+            try {
+                // Build params for API
+                let params = {};
+                if (gameType === 'crash') {
+                    const multEl = document.getElementById('crashMultiplier');
+                    // Convert decimal multiplier (e.g., 2.00) to basis points (e.g., 200) for server
+                    const decimalMult = multEl ? parseFloat(multEl.value) : 2.00;
+                    params.targetMultiplier = Math.round(decimalMult * 100);
+                    // Include user's client seed for provably fair verification
+                    params.clientSeed = userClientSeed || currentClientSeed;
+                } else if (gameType === 'dice') {
+                    params.rollUnder = param ?? true;
+                } else if (gameType === 'price') {
+                    params.predictUp = param;
+                }
+                
+                // INSTANT bet via API (no wallet popup!)
+                const res = await fetch('/api/bet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: userWalletAddress,
+                        amount: amountWei.toString(),
+                        game: gameType,
+                        params
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (!data.success) {
+                    return showToast("Bet failed: " + (data.error || "Unknown error"), "error");
+                }
+                
+                // Update balance
+                siteBalanceWei = data.balance;
+                updateBalanceDisplay();
+                
+                // Handle game results
+                if (gameType === 'dice') {
+                    playSound('dice');
+                    setTimeout(() => {
+                        if (data.won) {
+                            playSound('win');
+                            const payout = parseFloat(ethers.utils.formatEther(data.payout));
+                            showToast(`🎲 Rolled ${data.roll}! Payout: ${payout.toFixed(2)} VERSE`, "win", 5000);
+                        } else {
+                            playSound('lose');
+                            showToast(`🎲 Rolled ${data.roll}. Better luck next time!`, "error");
+                        }
+                    }, 400);
+                    if (document.getElementById('diceVrfId')) {
+                        document.getElementById('diceVrfId').innerText = "Instant Result: " + data.roll;
+                    }
+                } else if (gameType === 'price') {
+                    if (data.won) {
+                        playSound('win');
+                        const payout = parseFloat(ethers.utils.formatEther(data.payout));
+                        showToast(`📈 Price prediction correct! Payout: ${payout.toFixed(2)} VERSE`, "win", 5000);
+                    } else {
+                        playSound('lose');
+                        showToast(`📉 Price moved against your prediction.`, "error");
+                    }
+                } else if (gameType === 'pot') {
+                    playSound('bet');
+                    showToast("💎 Entered pot draw! Wait for the round to end.", "success");
+                    if (document.getElementById('potTxHash')) {
+                        document.getElementById('potTxHash').innerText = "Entry recorded";
+                    }
+                } else if (gameType === 'crash') {
+                    playSound('bet');
+                    // Crash bet placed, wait for game
+                    currentBet = { amount: amount, targetMultiplier: params.targetMultiplier };
+                }
+                
+                return true;
+            } catch (e) { 
+                console.error("Bet Error:", e);
+                showToast("Bet failed: " + (e.message || "Unknown error"), "error");
+                throw e; 
+            }
+        }
+
+        // Crash Logic
+        // Live Bettors Management (Real users only) - variables declared at top
+        
+        function truncateAddress(addr) {
+            if (!addr || addr.length < 12) return addr;
+            return addr.slice(0, 6) + "..." + addr.slice(-4);
+        }
+        
+        function addBettor(address, amount, target, payout = null) {
+            // Check if already exists
+            const existing = liveBettors.find(b => b.address.toLowerCase() === address.toLowerCase());
+            if (existing) return;
+            
+            const isMe = userWalletAddress && address.toLowerCase() === userWalletAddress.toLowerCase();
+            const bettor = {
+                id: Date.now(),
+                address: address,
+                amount: amount,
+                target: target,
+                status: 'playing',
+                payout: payout,
+                isMe: isMe
+            };
+            liveBettors.unshift(bettor);
+            updateBettorsList();
+        }
+        
+        function updateBettorStatus(address, status, payout = null, cashoutMultiplier = null) {
+            const bettor = liveBettors.find(b => b.address.toLowerCase() === address.toLowerCase());
+            if (bettor) {
+                bettor.status = status;
+                if (payout) bettor.payout = payout;
+                if (cashoutMultiplier) bettor.cashoutMultiplier = cashoutMultiplier;
+                updateBettorsList();
+            }
+        }
+        
+        function clearBettors() {
+            liveBettors = [];
+            updateBettorsList();
+        }
+        
+        function updateBettorsList() {
+            const list = document.getElementById('bettorsList');
+            const countEl = document.getElementById('bettorCount');
+            if (!list) return;
+            
+            if (countEl) countEl.textContent = liveBettors.length + ' players';
+            
+            if (liveBettors.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: #64748b; font-size: 0.8rem;">Waiting for bets...</div>';
+                return;
+            }
+            
+            list.innerHTML = liveBettors.map(b => {
+                let statusText = 'LIVE';
+                let payoutText = '';
+                if (b.status === 'won') {
+                    statusText = b.cashoutMultiplier ? `${b.cashoutMultiplier}x` : 'WON';
+                    if (b.payout) {
+                        const payoutVerse = parseFloat(b.payout) / 1e18;
+                        payoutText = `<div style="color: #00ff88; font-size: 0.7rem;">+${payoutVerse.toFixed(0)} VERSE</div>`;
+                    }
+                } else if (b.status === 'lost') {
+                    statusText = 'CRASHED';
+                }
+                
+                return `
+                <div class="bettor-row">
+                    <div class="bettor-info">
+                        <div class="bettor-avatar">${b.address.slice(2, 4).toUpperCase()}</div>
+                        <span class="bettor-address">${truncateAddress(b.address)}</span>
+                        ${b.isMe ? '<span style="color: var(--primary); font-size: 0.6rem; margin-left: 4px;">YOU</span>' : ''}
+                    </div>
+                    <div class="bettor-bet">
+                        <div class="bettor-amount">${b.amount.toLocaleString()} VERSE</div>
+                        ${payoutText}
+                    </div>
+                    <span class="bettor-status ${b.status}">${statusText}</span>
+                </div>
+            `}).join('');
+        }
+
+        function initCanvas() {
+            const c = document.getElementById('crashCanvas');
+            if(c) { 
+                const container = c.parentElement;
+                c.width = container.offsetWidth; 
+                c.height = container.offsetHeight; 
+            }
+        }
+
+        window.addEventListener('resize', initCanvas);
+
+        function startGlobalCrashLoop() {
+            // Server now handles the loop via WebSockets
+            console.log("Global loop managed by server");
+        }
+
+        async function cashOut() { 
+            if(!currentBet || !userWalletAddress) return;
+            
+            try {
+                const res = await fetch('/api/cashout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: userWalletAddress
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    const payout = parseFloat(ethers.utils.formatEther(data.payout));
+                    playSound('cashout');
+                    showToast(`Cashed out at ${data.multiplier}x! You won ${payout.toFixed(2)} VERSE!`, "win", 5000);
+                    siteBalanceWei = data.balance;
+                    updateBalanceDisplay();
+                    // Mark user as won in bettors list
+                    if (userWalletAddress) {
+                        updateBettorStatus(userWalletAddress, 'won');
+                    }
+                } else {
+                    showToast("Cash out failed: " + (data.error || "Unknown error"), "error");
+                }
+            } catch (e) {
+                console.error("Cashout error:", e);
+                showToast("Cash out failed", "error");
+            }
+            
+            currentBet = null;
+            const actionBtn = document.getElementById('crashActionBtn');
+            if (actionBtn) {
+                actionBtn.innerText = "Wait for Next Round";
+                actionBtn.disabled = true;
+            }
+        }
+
+        // Bet amount adjustment functions
+        function adjustBetAmount(game, multiplier) {
+            const inputId = game + 'BetAmount';
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            
+            let currentAmount = parseFloat(input.value) || 100;
+            let newAmount = currentAmount * multiplier;
+            
+            // Clamp to min/max, round to 2 decimal places for VERSE precision
+            newAmount = Math.max(1, Math.min(1000000, parseFloat(newAmount.toFixed(2))));
+            input.value = newAmount;
+            
+            // Visual feedback
+            input.style.borderColor = 'var(--primary)';
+            input.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.4)';
+            setTimeout(() => {
+                input.style.borderColor = '';
+                input.style.boxShadow = '';
+            }, 300);
+        }
+        
+        // ============ LUCKY POT GAME FUNCTIONS ============
+        let potState = {
+            roundId: 0,
+            totalPot: "0",
+            countdown: 60,
+            status: "waiting",
+            participants: [],
+            serverSeedHash: "",
+            lastWinner: null
+        };
+        let potWinners = [];
+        
+        function formatAddress(addr) {
+            if (!addr) return "???";
+            return addr.substring(0, 6) + "..." + addr.substring(addr.length - 4);
+        }
+        
+        function formatVerse(weiStr) {
+            try {
+                const wei = BigInt(weiStr || "0");
+                const verse = Number(wei) / 1e18;
+                if (verse >= 1000000) return (verse / 1000000).toFixed(2) + "M";
+                if (verse >= 1000) return (verse / 1000).toFixed(2) + "K";
+                return verse.toFixed(2);
+            } catch {
+                return "0";
+            }
+        }
+        
+        function updatePotState(data) {
+            potState = data;
+            
+            // Update pot amount display
+            const potAmountEl = document.getElementById('potTotalAmount');
+            if (potAmountEl) {
+                potAmountEl.textContent = formatVerse(data.totalPot) + " VERSE";
+            }
+            
+            // Update countdown
+            const countdownEl = document.getElementById('potCountdown');
+            if (countdownEl) {
+                countdownEl.textContent = data.status === 'drawing' ? 'Drawing Winner...' : `Draw in ${data.countdown}s`;
+                countdownEl.classList.toggle('urgent', data.countdown <= 10 && data.status !== 'drawing');
+            }
+            
+            // Update player count
+            const playerCountEl = document.getElementById('potPlayerCount');
+            if (playerCountEl) {
+                playerCountEl.textContent = `${data.participants.length} player${data.participants.length !== 1 ? 's' : ''}`;
+            }
+            
+            // Update participants list
+            const participantsListEl = document.getElementById('potParticipantsList');
+            if (participantsListEl) {
+                if (data.participants.length === 0) {
+                    participantsListEl.innerHTML = '<div class="pot-no-participants">No players yet. Be the first to join!</div>';
+                } else {
+                    participantsListEl.innerHTML = data.participants.map(p => `
+                        <div class="pot-participant">
+                            <div class="pot-participant-info">
+                                <div class="pot-avatar">${p.address.substring(2, 4).toUpperCase()}</div>
+                                <span class="pot-participant-address">${formatAddress(p.address)}</span>
+                            </div>
+                            <span class="pot-participant-amount">${formatVerse(p.amount)} VERSE</span>
+                            <span class="pot-participant-chance">${p.chance.toFixed(2)}%</span>
+                        </div>
+                    `).join('');
+                }
+            }
+            
+            // Update server seed hash
+            const seedHashEl = document.getElementById('potServerSeedHash');
+            if (seedHashEl && data.serverSeedHash) {
+                seedHashEl.textContent = data.serverSeedHash.substring(0, 32) + '...';
+            }
+        }
+        
+        function showPotWinner(data) {
+            playSound('win');
+            showToast(`Winner: ${formatAddress(data.address)} won ${formatVerse(data.amount)} VERSE with ${data.chance}% chance!`, 'win');
+            
+            // Add to winners list
+            potWinners.unshift(data);
+            if (potWinners.length > 5) potWinners.pop();
+            updatePotWinnersList();
+        }
+        
+        function updatePotWinnersList() {
+            const winnersListEl = document.getElementById('potWinnersList');
+            if (!winnersListEl) return;
+            
+            if (potWinners.length === 0) {
+                winnersListEl.innerHTML = '<div class="pot-no-participants">No recent winners yet</div>';
+            } else {
+                winnersListEl.innerHTML = potWinners.map(w => `
+                    <div class="pot-winner-item">
+                        <div class="pot-winner-info">
+                            <span class="pot-winner-address">${formatAddress(w.address)}</span>
+                            <span class="pot-winner-chance">Won with ${w.chance}% chance</span>
+                        </div>
+                        <span class="pot-winner-prize">${formatVerse(w.amount)} VERSE</span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function adjustPotAmount(multiplier) {
+            const input = document.getElementById('potBetAmount');
+            if (!input) return;
+            
+            let currentAmount = parseFloat(input.value) || 100;
+            let newAmount = currentAmount * multiplier;
+            newAmount = Math.max(1, Math.min(1000000, parseFloat(newAmount.toFixed(2))));
+            input.value = newAmount;
+            
+            // Visual feedback
+            input.style.borderColor = 'var(--primary)';
+            input.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.4)';
+            setTimeout(() => {
+                input.style.borderColor = '';
+                input.style.boxShadow = '';
+            }, 300);
+        }
+        
+        function adjustPotAmountDelta(delta) {
+            const input = document.getElementById('potBetAmount');
+            if (!input) return;
+            
+            let currentAmount = parseFloat(input.value) || 100;
+            let newAmount = currentAmount + delta;
+            newAmount = Math.max(1, Math.min(1000000, parseFloat(newAmount.toFixed(2))));
+            input.value = newAmount;
+            
+            // Visual feedback
+            input.style.borderColor = 'var(--primary)';
+            input.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.4)';
+            setTimeout(() => {
+                input.style.borderColor = '';
+                input.style.boxShadow = '';
+            }, 300);
+        }
+        
+        async function joinPot() {
+            if (!userWalletAddress) {
+                return showToast("Please connect wallet first!", "warning");
+            }
+            
+            const input = document.getElementById('potBetAmount');
+            const amount = parseFloat(input?.value || "100");
+            
+            if (isNaN(amount) || amount < 1 || amount > 1000000) {
+                return showToast("Bet amount must be between 1 and 1,000,000 VERSE", "warning");
+            }
+            
+            const amountWei = ethers.utils.parseUnits(amount.toString(), 18).toString();
+            
+            // Check site balance
+            if (BigInt(amountWei) > BigInt(siteBalanceWei)) {
+                return showToast("Insufficient site balance! Please deposit more VERSE.", "error");
+            }
+            
+            const joinBtn = document.getElementById('potJoinBtn');
+            if (joinBtn) {
+                joinBtn.disabled = true;
+                joinBtn.textContent = 'JOINING...';
+            }
+            
+            try {
+                const response = await fetch('/api/pot/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: userWalletAddress,
+                        amount: amountWei
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    playSound('bet');
+                    showToast(`Joined pot with ${amount} VERSE! Your chance: ${result.entry.chance.toFixed(2)}%`, 'success');
+                    
+                    // Update local balance
+                    siteBalanceWei = result.balance;
+                    updateBalanceDisplay();
+                } else {
+                    showToast(result.error || "Failed to join pot", "error");
+                }
+            } catch (err) {
+                console.error("Join pot error:", err);
+                showToast("Error joining pot. Please try again.", "error");
+            } finally {
+                if (joinBtn) {
+                    joinBtn.disabled = false;
+                    joinBtn.textContent = 'JOIN POT';
+                }
+            }
+        }
+        
+        // Load pot winners on page load
+        async function loadPotWinners() {
+            try {
+                const response = await fetch('/api/pot/winners');
+                const winners = await response.json();
+                potWinners = winners.map(w => ({
+                    address: w.address || w.winnerAddress,
+                    amount: w.amount || w.winnerAmount,
+                    chance: w.chance || w.winnerChance
+                }));
+                updatePotWinnersList();
+            } catch (err) {
+                console.error("Failed to load pot winners:", err);
+            }
+        }
+        
+        // Initialize pot game
+        loadPotWinners();
+        
+        // Attach pot socket handlers now that functions are defined
+        socket.on('pot_state', (data) => {
+            updatePotState(data);
+        });
+        
+        socket.on('pot_winner', (data) => {
+            showPotWinner(data);
+        });
+        
+        socket.on('pot_entry', (data) => {
+            // Entry broadcast handled by pot_state update
+        });
+        
+        // ============ PRICE BET GAME ============
+        let priceBetState = {
+            roundId: 0,
+            status: 'betting',
+            startPrice: '0',
+            currentPrice: '0',
+            countdown: 15,
+            upBets: 0,
+            downBets: 0
+        };
+        let btcPriceHistory = [];
+        let userPriceBet = null;
+        let priceChartCtx = null;
+        
+        // Initialize price chart
+        function initPriceChart() {
+            const canvas = document.getElementById('btcPriceChart');
+            if (!canvas) return;
+            priceChartCtx = canvas.getContext('2d');
+        }
+        
+        // Draw price chart
+        function drawPriceChart() {
+            if (!priceChartCtx || btcPriceHistory.length < 2) return;
+            
+            const canvas = priceChartCtx.canvas;
+            const width = canvas.width = canvas.offsetWidth * 2;
+            const height = canvas.height = canvas.offsetHeight * 2;
+            
+            priceChartCtx.clearRect(0, 0, width, height);
+            
+            // Get price range
+            const prices = btcPriceHistory.map(p => parseFloat(p.price));
+            const minPrice = Math.min(...prices) * 0.9999;
+            const maxPrice = Math.max(...prices) * 1.0001;
+            const priceRange = maxPrice - minPrice || 1;
+            
+            // Draw grid lines
+            priceChartCtx.strokeStyle = 'rgba(0, 212, 255, 0.1)';
+            priceChartCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = (height / 4) * i;
+                priceChartCtx.beginPath();
+                priceChartCtx.moveTo(0, y);
+                priceChartCtx.lineTo(width, y);
+                priceChartCtx.stroke();
+            }
+            
+            // Draw price line with gradient
+            const gradient = priceChartCtx.createLinearGradient(0, 0, width, 0);
+            gradient.addColorStop(0, '#00d4ff');
+            gradient.addColorStop(1, '#00ff88');
+            
+            priceChartCtx.strokeStyle = gradient;
+            priceChartCtx.lineWidth = 3;
+            priceChartCtx.beginPath();
+            
+            btcPriceHistory.forEach((point, i) => {
+                const x = (i / (btcPriceHistory.length - 1)) * width;
+                const y = height - ((parseFloat(point.price) - minPrice) / priceRange) * height;
+                if (i === 0) {
+                    priceChartCtx.moveTo(x, y);
+                } else {
+                    priceChartCtx.lineTo(x, y);
+                }
+            });
+            priceChartCtx.stroke();
+            
+            // Draw glow effect
+            priceChartCtx.shadowColor = '#00d4ff';
+            priceChartCtx.shadowBlur = 10;
+            priceChartCtx.stroke();
+            priceChartCtx.shadowBlur = 0;
+            
+            // Draw start price line if locked
+            if (priceBetState.status === 'locked' && priceBetState.startPrice !== '0') {
+                const startY = height - ((parseFloat(priceBetState.startPrice) - minPrice) / priceRange) * height;
+                priceChartCtx.strokeStyle = '#f7931a';
+                priceChartCtx.lineWidth = 2;
+                priceChartCtx.setLineDash([5, 5]);
+                priceChartCtx.beginPath();
+                priceChartCtx.moveTo(0, startY);
+                priceChartCtx.lineTo(width, startY);
+                priceChartCtx.stroke();
+                priceChartCtx.setLineDash([]);
+            }
+        }
+        
+        // Update price bet UI
+        function updatePriceBetUI(state) {
+            priceBetState = { ...priceBetState, ...state };
+            
+            // Update current price
+            const priceEl = document.getElementById('btcCurrentPrice');
+            if (priceEl && state.currentPrice) {
+                const price = parseFloat(state.currentPrice);
+                priceEl.innerText = '$' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            
+            // Update price change indicator
+            const changeEl = document.getElementById('btcPriceChange');
+            if (changeEl && state.startPrice && state.startPrice !== '0' && state.status === 'locked') {
+                const start = parseFloat(state.startPrice);
+                const current = parseFloat(state.currentPrice);
+                const change = ((current - start) / start * 100);
+                changeEl.innerText = (change >= 0 ? '+' : '') + change.toFixed(3) + '%';
+                changeEl.className = 'btc-price-change' + (change < 0 ? ' negative' : '');
+            }
+            
+            // Update phase indicator
+            const phaseEl = document.getElementById('priceBetPhase');
+            if (phaseEl) {
+                if (state.status === 'betting') {
+                    phaseEl.innerText = 'BETTING OPEN';
+                    phaseEl.className = 'round-phase';
+                } else if (state.status === 'locked') {
+                    phaseEl.innerText = 'LOCKED - WAITING';
+                    phaseEl.className = 'round-phase locked';
+                } else if (state.status === 'settling' || state.status === 'settled') {
+                    phaseEl.innerText = 'SETTLING';
+                    phaseEl.className = 'round-phase settled';
+                }
+            }
+            
+            // Update countdown
+            const countdownEl = document.getElementById('priceBetCountdown');
+            if (countdownEl) {
+                const mins = Math.floor(state.countdown / 60);
+                const secs = state.countdown % 60;
+                countdownEl.innerText = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+            }
+            
+            // Update start price
+            const startPriceEl = document.getElementById('priceBetStartPrice');
+            if (startPriceEl) {
+                if (state.startPrice && state.startPrice !== '0') {
+                    const price = parseFloat(state.startPrice);
+                    startPriceEl.innerText = '$' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else {
+                    startPriceEl.innerText = '-';
+                }
+            }
+            
+            // Update bet counts
+            const upBetsEl = document.getElementById('priceUpBets');
+            const downBetsEl = document.getElementById('priceDownBets');
+            if (upBetsEl) upBetsEl.innerText = state.upBets || 0;
+            if (downBetsEl) downBetsEl.innerText = state.downBets || 0;
+            
+            // Update button states
+            const upBtn = document.getElementById('priceUpBtn');
+            const downBtn = document.getElementById('priceDownBtn');
+            const canBet = state.status === 'betting' && !userPriceBet;
+            if (upBtn) upBtn.disabled = !canBet;
+            if (downBtn) downBtn.disabled = !canBet;
+        }
+        
+        // Place price bet
+        async function placePriceBet(direction) {
+            if (!userWalletAddress) {
+                return showToast("Connect wallet to play", "warning");
+            }
+            
+            if (priceBetState.status !== 'betting') {
+                return showToast("Betting is closed for this round", "warning");
+            }
+            
+            if (userPriceBet) {
+                return showToast("Already placed a bet this round", "warning");
+            }
+            
+            const stakeInput = document.getElementById('priceBetAmount');
+            const stake = stakeInput ? parseFloat(stakeInput.value) : 100;
+            
+            if (stake < 1 || stake > 1000000) {
+                return showToast("Stake must be 1 - 1,000,000 VERSE", "warning");
+            }
+            
+            const stakeWei = BigInt(Math.floor(stake * 1e18)).toString();
+            
+            try {
+                const response = await fetch('/api/price-bet/bet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: userWalletAddress,
+                        direction: direction,
+                        stake: stakeWei
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    return showToast(data.error || "Failed to place bet", "error");
+                }
+                
+                userPriceBet = { direction, stake: stakeWei };
+                showToast(`Bet placed: ${direction.toUpperCase()} for ${stake} VERSE!`, "success");
+                updateBalance();
+                
+                // Disable buttons
+                const upBtn = document.getElementById('priceUpBtn');
+                const downBtn = document.getElementById('priceDownBtn');
+                if (upBtn) upBtn.disabled = true;
+                if (downBtn) downBtn.disabled = true;
+                
+            } catch (err) {
+                console.error("Price bet error:", err);
+                showToast("Failed to place bet", "error");
+            }
+        }
+        
+        // Handle price bet result
+        function handlePriceBetResult(result) {
+            if (userPriceBet) {
+                const won = userPriceBet.direction === result.winDirection;
+                if (won) {
+                    showToast(`You won! BTC went ${result.winDirection.toUpperCase()}`, "success");
+                } else {
+                    showToast(`You lost. BTC went ${result.winDirection.toUpperCase()}`, "error");
+                }
+                userPriceBet = null;
+                updateBalance();
+            }
+            
+            // Load updated history
+            loadPriceBetHistory();
+        }
+        
+        // Load price bet history
+        async function loadPriceBetHistory() {
+            try {
+                const response = await fetch('/api/price-bet/history');
+                const history = await response.json();
+                
+                const listEl = document.getElementById('priceBetHistoryList');
+                if (!listEl) return;
+                
+                if (history.length === 0) {
+                    listEl.innerHTML = '<div class="pot-no-participants">No results yet</div>';
+                    return;
+                }
+                
+                listEl.innerHTML = history.slice(0, 5).map(round => {
+                    const startPrice = parseFloat(round.startPrice || '0');
+                    const settlePrice = parseFloat(round.settlePrice || '0');
+                    return `
+                        <div class="price-history-item">
+                            <span class="price-history-direction ${round.winDirection}">${round.winDirection ? round.winDirection.toUpperCase() : '-'}</span>
+                            <span class="price-history-prices">$${startPrice.toFixed(2)} → $${settlePrice.toFixed(2)}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Failed to load price bet history:", err);
+            }
+        }
+        
+        // Update potential win display
+        function updatePricePotentialWin() {
+            const stakeInput = document.getElementById('priceBetAmount');
+            const potentialWinEl = document.getElementById('pricePotentialWin');
+            if (stakeInput && potentialWinEl) {
+                const stake = parseFloat(stakeInput.value) || 0;
+                const potentialWin = Math.floor(stake * 1.95);
+                potentialWinEl.innerText = potentialWin.toLocaleString();
+            }
+        }
+        
+        // ========== DICE ROLL GAME ==========
+        let diceTarget = 50;
+        let diceIsRolling = false;
+        
+        // Calculate multiplier: (99 / target) * 0.99 (1% house edge)
+        function calculateDiceMultiplier(target) {
+            return ((99 / target) * 0.99).toFixed(4);
+        }
+        
+        // Update dice target from slider
+        function updateDiceTarget(value) {
+            diceTarget = parseInt(value);
+            const multiplier = calculateDiceMultiplier(diceTarget);
+            
+            // Update displays
+            document.getElementById('diceTargetValue').innerText = diceTarget;
+            document.getElementById('diceRollUnder').innerText = diceTarget;
+            document.getElementById('diceMultiplier').innerText = parseFloat(multiplier).toFixed(2) + 'x';
+            document.getElementById('diceWinChance').innerText = diceTarget + '%';
+            
+            // Update slider fill
+            const fill = document.getElementById('diceSliderFill');
+            const track = document.getElementById('diceSliderTrack');
+            if (fill) fill.style.width = diceTarget + '%';
+            if (track) track.style.setProperty('--fill-percent', diceTarget + '%');
+            
+            // Update potential win
+            updateDicePotentialWin();
+        }
+        
+        // Update potential win display
+        function updateDicePotentialWin() {
+            const stakeInput = document.getElementById('diceBetAmount');
+            const potentialWinEl = document.getElementById('dicePotentialWin');
+            if (stakeInput && potentialWinEl) {
+                const stake = parseFloat(stakeInput.value) || 0;
+                const multiplier = parseFloat(calculateDiceMultiplier(diceTarget));
+                const potentialWin = Math.floor(stake * multiplier);
+                potentialWinEl.innerText = potentialWin.toLocaleString() + ' VERSE';
+            }
+        }
+        
+        // Dice seed info is now shown after each bet in the verification section
+        
+        // Update client seed
+        async function updateDiceClientSeed() {
+            if (!userWalletAddress) return showToast("Connect wallet first", "warning");
+            
+            const input = document.getElementById('diceClientSeedInput');
+            const clientSeed = input ? input.value.trim() : '';
+            
+            if (!clientSeed || clientSeed.length < 1) {
+                return showToast("Enter a valid client seed", "warning");
+            }
+            
+            try {
+                const res = await fetch('/api/dice/seed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress: userWalletAddress, clientSeed })
+                });
+                
+                if (res.ok) {
+                    showToast("Client seed updated!", "success");
+                } else {
+                    showToast("Failed to update seed", "error");
+                }
+            } catch (err) {
+                showToast("Failed to update seed", "error");
+            }
+        }
+        
+        // Rotate server seed (get new seeds for next bets)
+        async function rotateDiceSeed() {
+            if (!userWalletAddress) return showToast("Connect wallet first", "warning");
+            
+            try {
+                const res = await fetch('/api/dice/rotate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress: userWalletAddress })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showToast("New seeds generated!", "success");
+                    // Hide verification section since we have new seeds
+                    const fairnessSection = document.getElementById('diceFairnessSection');
+                    if (fairnessSection) fairnessSection.style.display = 'none';
+                } else {
+                    showToast("Failed to rotate seed", "error");
+                }
+            } catch (err) {
+                showToast("Failed to rotate seed", "error");
+            }
+        }
+        
+        // Place dice bet
+        async function placeDiceBet() {
+            if (diceIsRolling) return;
+            
+            if (!userWalletAddress) {
+                return showToast("Connect wallet to play", "warning");
+            }
+            
+            const stakeInput = document.getElementById('diceBetAmount');
+            const stake = stakeInput ? parseFloat(stakeInput.value) : 100;
+            
+            if (stake < 1 || stake > 1000000) {
+                return showToast("Bet must be 1 - 1,000,000 VERSE", "warning");
+            }
+            
+            const stakeWei = BigInt(Math.floor(stake * 1e18)).toString();
+            
+            diceIsRolling = true;
+            const rollBtn = document.getElementById('diceRollBtn');
+            const diceWrapper = document.getElementById('diceWrapper');
+            const diceFace = document.getElementById('diceFace');
+            const resultNum = document.getElementById('diceResultNumber');
+            const resultMsg = document.getElementById('diceResultMessage');
+            const marker = document.getElementById('diceResultMarker');
+            
+            if (rollBtn) {
+                rollBtn.innerText = "Rolling...";
+                rollBtn.disabled = true;
+            }
+            if (diceWrapper) diceWrapper.classList.add('rolling');
+            if (diceFace) diceFace.className = 'dice-face front';
+            if (resultNum) resultNum.innerText = '??';
+            if (resultMsg) {
+                resultMsg.className = 'dice-result-message';
+                resultMsg.innerText = 'Rolling...';
+            }
+            if (marker) marker.style.display = 'none';
+            
+            // Play rolling sound
+            if (typeof playSound === 'function') playSound('countdown');
+            
+            try {
+                const res = await fetch('/api/dice/bet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: userWalletAddress,
+                        stake: stakeWei,
+                        target: diceTarget
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    diceIsRolling = false;
+                    if (rollBtn) {
+                        rollBtn.innerText = "Roll Dice";
+                        rollBtn.disabled = false;
+                    }
+                    if (diceWrapper) diceWrapper.classList.remove('rolling');
+                    if (diceFace) diceFace.className = 'dice-face front';
+                    if (resultMsg) resultMsg.innerText = 'Place a bet to roll';
+                    return showToast(data.error || "Failed to place bet", "error");
+                }
+                
+                // Animate result reveal
+                await animateDiceResult(data.diceResult, data.won, data.target);
+                
+                // Update displays
+                if (diceWrapper) diceWrapper.classList.remove('rolling');
+                if (resultNum) resultNum.innerText = data.diceResult;
+                if (diceFace) diceFace.className = 'dice-face front ' + (data.won ? 'win' : 'lose');
+                
+                if (data.won) {
+                    const payoutVerse = Math.floor(Number(BigInt(data.payout)) / 1e18);
+                    if (resultMsg) {
+                        resultMsg.className = 'dice-result-message win';
+                        resultMsg.innerText = 'WIN! +' + payoutVerse.toLocaleString() + ' VERSE';
+                    }
+                    if (typeof playSound === 'function') playSound('win');
+                    showToast("You won " + payoutVerse.toLocaleString() + " VERSE!", "success");
+                } else {
+                    if (resultMsg) {
+                        resultMsg.className = 'dice-result-message lose';
+                        resultMsg.innerText = 'Roll ' + data.diceResult + ' >= ' + data.target + ' - LOSE';
+                    }
+                    if (typeof playSound === 'function') playSound('lose');
+                }
+                
+                // Show marker on slider
+                if (marker) {
+                    marker.style.display = 'block';
+                    marker.style.left = data.diceResult + '%';
+                    marker.className = 'dice-slider-marker ' + (data.won ? 'win' : 'lose');
+                }
+                
+                // Show verification section with revealed seed
+                const fairnessSection = document.getElementById('diceFairnessSection');
+                const revealedSeedEl = document.getElementById('diceRevealedSeed');
+                const usedClientEl = document.getElementById('diceUsedClientSeed');
+                const usedNonceEl = document.getElementById('diceUsedNonce');
+                const verifyResultEl = document.getElementById('diceVerifyResult');
+                
+                if (fairnessSection) fairnessSection.style.display = 'block';
+                if (revealedSeedEl) revealedSeedEl.innerText = data.serverSeed;
+                if (usedClientEl) usedClientEl.innerText = data.clientSeed;
+                if (usedNonceEl) usedNonceEl.innerText = data.nonce;
+                if (verifyResultEl) verifyResultEl.innerText = data.diceResult + ' (Roll Under ' + data.target + ' = ' + (data.won ? 'WIN' : 'LOSE') + ')';
+                
+                // Update balance
+                updateBalance();
+                
+                // Reload history
+                loadDiceHistory();
+                
+            } catch (err) {
+                console.error("Dice bet error:", err);
+                showToast("Failed to place bet", "error");
+            } finally {
+                diceIsRolling = false;
+                if (rollBtn) {
+                    rollBtn.innerText = "Roll Dice";
+                    rollBtn.disabled = false;
+                }
+            }
+        }
+        
+        // Animate dice result reveal
+        function animateDiceResult(finalResult, won, target) {
+            return new Promise(resolve => {
+                const resultNum = document.getElementById('diceResultNumber');
+                let duration = 1000;
+                let start = Date.now();
+                
+                const animate = () => {
+                    const elapsed = Date.now() - start;
+                    if (elapsed < duration) {
+                        // Show random numbers during animation
+                        if (resultNum) resultNum.innerText = Math.floor(Math.random() * 100);
+                        requestAnimationFrame(animate);
+                    } else {
+                        if (resultNum) resultNum.innerText = finalResult;
+                        resolve();
+                    }
+                };
+                
+                animate();
+            });
+        }
+        
+        // Load dice history - individual player only
+        async function loadDiceHistory() {
+            try {
+                const listEl = document.getElementById('diceHistoryList');
+                if (!listEl) return;
+                
+                // Only show history for connected wallet
+                if (!userWalletAddress) {
+                    listEl.innerHTML = '<div class="pot-no-participants">Connect wallet to see your rolls</div>';
+                    return;
+                }
+                
+                const res = await fetch('/api/dice/history?wallet=' + encodeURIComponent(userWalletAddress));
+                const history = await res.json();
+                
+                if (!history || history.length === 0) {
+                    listEl.innerHTML = '<div class="pot-no-participants">No rolls yet - place your first bet!</div>';
+                    return;
+                }
+                
+                listEl.innerHTML = history.slice(0, 10).map(bet => {
+                    const won = bet.result === 'win';
+                    const payout = bet.payout ? Math.floor(Number(BigInt(bet.payout)) / 1e18) : 0;
+                    return `
+                        <div class="dice-history-item">
+                            <span class="dice-history-result ${won ? 'win' : 'lose'}">${bet.diceResult}</span>
+                            <span class="dice-history-target">&lt;${bet.target}</span>
+                            ${won ? '<span class="dice-history-payout">+' + payout.toLocaleString() + '</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Failed to load dice history:", err);
+            }
+        }
+        
+        // ========== END DICE ROLL GAME ==========
+        
+        // Add event listener for stake input
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize AppKit early on page load
+            console.log("Page loaded, initializing AppKit...");
+            try {
+                await initAppKit();
+                console.log("AppKit initialized on page load");
+            } catch (e) {
+                console.error("Failed to initialize AppKit on page load:", e);
+            }
+            
+            const stakeInput = document.getElementById('priceBetAmount');
+            if (stakeInput) {
+                stakeInput.addEventListener('input', updatePricePotentialWin);
+            }
+            initPriceChart();
+            loadPriceBetHistory();
+            
+            // Initialize dice game
+            const diceStakeInput = document.getElementById('diceBetAmount');
+            if (diceStakeInput) {
+                diceStakeInput.addEventListener('input', updateDicePotentialWin);
+            }
+            updateDiceTarget(50); // Initialize with default value
+            loadDiceHistory();
+        });
+        
+        // Socket handlers for price bet
+        socket.on('btc_price', (data) => {
+            btcPriceHistory.push(data);
+            if (btcPriceHistory.length > 60) btcPriceHistory.shift();
+            
+            // Update price display
+            const priceEl = document.getElementById('btcCurrentPrice');
+            if (priceEl) {
+                const price = parseFloat(data.price);
+                priceEl.innerText = '$' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            
+            drawPriceChart();
+        });
+        
+        socket.on('price_bet_state', (data) => {
+            // Reset user bet on new round
+            if (data.roundId !== priceBetState.roundId) {
+                userPriceBet = null;
+            }
+            updatePriceBetUI(data);
+        });
+        
+        socket.on('price_bet_result', (data) => {
+            handlePriceBetResult(data);
+        });
+        
+        function updateTargetDisplay(game) {
+            if (game === 'crash') {
+                const input = document.getElementById('crashMultiplier');
+                const display = document.getElementById('crashTargetDisplay');
+                if (input && display) {
+                    const value = parseFloat(input.value) || 2.00;
+                    display.innerText = value.toFixed(2) + 'x';
+                }
+            }
+        }
+        
+        // Initialize target displays on load
+        function initBettingUI() {
+            updateTargetDisplay('crash');
+        }
+
+        function handleCrashAction() {
+            if (gameState === 'waiting') {
+                const el = document.getElementById('crashBetAmount');
+                const amount = el ? parseFloat(el.value) : 100;
+                if (amount < 1 || amount > 1000000) return showToast("Bet must be 1 - 1,000,000 VERSE", "warning");
+                
+                const multEl = document.getElementById('crashMultiplier');
+                const mult = multEl ? parseFloat(multEl.value) : 2.00;
+                if (mult < 1.01 || mult > 100) return showToast("Target multiplier must be between 1.01x and 100x", "warning");
+                
+                const actionBtn = document.getElementById('crashActionBtn');
+                if (actionBtn) {
+                    actionBtn.innerText = "Processing...";
+                    actionBtn.disabled = true;
+                }
+
+                play('crash').then(() => {
+                    currentBet = amount;
+                    // Add real user to live bettors list (convert decimal multiplier to basis points for internal use)
+                    if (userWalletAddress) {
+                        const multEl = document.getElementById('crashMultiplier');
+                        const targetMult = multEl ? Math.round(parseFloat(multEl.value) * 100) : 200;
+                        addBettor(userWalletAddress, amount, targetMult, true);
+                    }
+                    if (actionBtn) {
+                        actionBtn.innerText = "Bet Placed!";
+                        actionBtn.disabled = true;
+                    }
+                }).catch(err => {
+                    console.error("Bet failed", err);
+                    if (actionBtn) {
+                        actionBtn.innerText = "Place Bet";
+                        actionBtn.disabled = false;
+                    }
+                });
+            } else if (gameState === 'playing' && currentBet) {
+                cashOut();
+            }
+        }
+
+        // Initialize Global Loop
+        window.addEventListener('load', async () => {
+            await initAppKit();
+            initBettingUI();
+            initClientSeedUI();
+            startGlobalCrashLoop();
+        });
+    </script>
+</body>
+</html>
